@@ -1,0 +1,837 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EcoRoute API",
+    "description": "API RESTful para mapeamento inteligente e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste), com suporte a consultas geoespaciais e controle de capacidade operacional. Projeto alinhado ao ODS 11 (Cidades e Comunidades Sustentáveis) - Meta 11.6.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Equipe EcoRoute",
+      "email": "suporte@ecoroute.com"
+    }
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Verificação de integridade da API",
+        "tags": [
+          "Sistema"
+        ],
+        "description": "Retorna o status atual do serviço, ambiente e conectividade.",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/collection-points/": {
+      "get": {
+        "summary": "Listar pontos de coleta próximos",
+        "tags": [
+          "Pontos de Coleta"
+        ],
+        "description": "Busca pontos de coleta homologados próximos a partir de coordenadas geográficas (WGS 84) e raio de distância.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "in": "query",
+            "name": "lat",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "in": "query",
+            "name": "lng",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": true,
+              "minimum": 0,
+              "maximum": 100,
+              "default": 5
+            },
+            "in": "query",
+            "name": "radius_km",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "category",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "in": "query",
+            "name": "page",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "latitude": {
+                            "type": "number"
+                          },
+                          "longitude": {
+                            "type": "number"
+                          },
+                          "distance_km": {
+                            "type": "number"
+                          },
+                          "accepted_categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "max_daily_capacity": {
+                            "type": "number"
+                          },
+                          "is_active": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "address",
+                          "latitude",
+                          "longitude",
+                          "accepted_categories",
+                          "max_daily_capacity",
+                          "is_active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "number"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "total_items": {
+                          "type": "number"
+                        },
+                        "total_pages": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "limit",
+                        "total_items",
+                        "total_pages"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cadastrar ponto de coleta",
+        "tags": [
+          "Pontos de Coleta"
+        ],
+        "description": "Registra uma nova unidade de coleta autorizada no sistema.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  },
+                  "address": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 255
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "accepted_categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "max_daily_capacity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "name",
+                  "address",
+                  "latitude",
+                  "longitude",
+                  "accepted_categories"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "address": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "number"
+                    },
+                    "longitude": {
+                      "type": "number"
+                    },
+                    "distance_km": {
+                      "type": "number"
+                    },
+                    "accepted_categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "max_daily_capacity": {
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "address",
+                    "latitude",
+                    "longitude",
+                    "accepted_categories",
+                    "max_daily_capacity",
+                    "is_active"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/collection-points/{id}": {
+      "get": {
+        "summary": "Consultar ponto de coleta por ID",
+        "tags": [
+          "Pontos de Coleta"
+        ],
+        "description": "Recupera detalhes cadastrais de um ponto de coleta específico.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "address": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "number"
+                    },
+                    "longitude": {
+                      "type": "number"
+                    },
+                    "distance_km": {
+                      "type": "number"
+                    },
+                    "accepted_categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "max_daily_capacity": {
+                      "type": "number"
+                    },
+                    "is_active": {
+                      "type": "boolean"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "address",
+                    "latitude",
+                    "longitude",
+                    "accepted_categories",
+                    "max_daily_capacity",
+                    "is_active"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/": {
+      "post": {
+        "summary": "Criar agendamento de descarte",
+        "tags": [
+          "Agendamentos"
+        ],
+        "description": "Registra um agendamento de descarte com validação de capacidade diária e compatibilidade de resíduos.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "collection_point_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "user_name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "user_email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 120
+                  },
+                  "scheduled_date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "waste_category": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50
+                  },
+                  "items_description": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "collection_point_id",
+                  "user_name",
+                  "user_email",
+                  "scheduled_date",
+                  "waste_category",
+                  "items_description"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "collection_point_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user_name": {
+                      "type": "string"
+                    },
+                    "user_email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "scheduled_date": {
+                      "type": "string"
+                    },
+                    "waste_category": {
+                      "type": "string"
+                    },
+                    "items_description": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "CONFIRMED",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "collection_point_id",
+                    "user_name",
+                    "user_email",
+                    "scheduled_date",
+                    "waste_category",
+                    "items_description",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Listar agendamentos",
+        "tags": [
+          "Agendamentos"
+        ],
+        "description": "Lista agendamentos de descarte com filtros opcionais.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "query",
+            "name": "collection_point_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "scheduled_date",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "collection_point_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_name": {
+                        "type": "string"
+                      },
+                      "user_email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "scheduled_date": {
+                        "type": "string"
+                      },
+                      "waste_category": {
+                        "type": "string"
+                      },
+                      "items_description": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "PENDING",
+                          "CONFIRMED",
+                          "COMPLETED",
+                          "CANCELLED"
+                        ]
+                      },
+                      "created_at": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "collection_point_id",
+                      "user_name",
+                      "user_email",
+                      "scheduled_date",
+                      "waste_category",
+                      "items_description",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}/status": {
+      "patch": {
+        "summary": "Atualizar status do agendamento",
+        "tags": [
+          "Agendamentos"
+        ],
+        "description": "Atualiza o status do ciclo de vida do descarte (PENDING, CONFIRMED, COMPLETED, CANCELLED).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "CONFIRMED",
+                      "COMPLETED",
+                      "CANCELLED"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "collection_point_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user_name": {
+                      "type": "string"
+                    },
+                    "user_email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "scheduled_date": {
+                      "type": "string"
+                    },
+                    "waste_category": {
+                      "type": "string"
+                    },
+                    "items_description": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "CONFIRMED",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "collection_point_id",
+                    "user_name",
+                    "user_email",
+                    "scheduled_date",
+                    "waste_category",
+                    "items_description",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}": {
+      "get": {
+        "summary": "Consultar agendamento por ID",
+        "tags": [
+          "Agendamentos"
+        ],
+        "description": "Recupera os detalhes de um agendamento específico.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "collection_point_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user_name": {
+                      "type": "string"
+                    },
+                    "user_email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "scheduled_date": {
+                      "type": "string"
+                    },
+                    "waste_category": {
+                      "type": "string"
+                    },
+                    "items_description": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "CONFIRMED",
+                        "COMPLETED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "collection_point_id",
+                    "user_name",
+                    "user_email",
+                    "scheduled_date",
+                    "waste_category",
+                    "items_description",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor Local de Desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Pontos de Coleta",
+      "description": "Gestão e busca geoespacial de Pontos de Entrega Voluntária (PEV)"
+    },
+    {
+      "name": "Agendamentos",
+      "description": "Agendamento de descarte com controle de cotas diárias de capacidade"
+    },
+    {
+      "name": "Sistema",
+      "description": "Monitoramento de integridade e saúde da aplicação"
+    }
+  ]
+}

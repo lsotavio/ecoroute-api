@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: ecoroute_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ecoroute
+      POSTGRES_PASSWORD: ecoroute_password
+      POSTGRES_DB: ecoroute_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecoroute -d ecoroute_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: ecoroute_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://ecoroute:ecoroute_password@db:5432/ecoroute_db"
+      PORT: 3000
+      HOST: "0.0.0.0"
+      NODE_ENV: "production"
+      USE_IN_MEMORY_DB: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

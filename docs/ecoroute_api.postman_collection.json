@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "b7891c34-8025-4c07-9fae-6e4b859e9432",
+    "name": "EcoRoute API - ODS 11",
+    "description": "Coleção de testes e documentação da EcoRoute API. Desenvolvida para mapeamento inteligente de PEVs e agendamento de descarte de lixo eletrônico (e-waste) alinhada ao ODS 11.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "createdPointId",
+      "value": "7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4",
+      "type": "string"
+    },
+    {
+      "key": "createdScheduleId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Sistema",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Verifica se a API está ativa e o status da conexão com o banco de dados."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🗺️ Pontos de Coleta",
+      "item": [
+        {
+          "name": "1. Buscar Pontos Próximos (Geoespacial)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/collection-points?lat=-23.5678&lng=-46.6845&radius_km=5&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "collection-points"],
+              "query": [
+                { "key": "lat", "value": "-23.5678", "description": "Latitude do usuário" },
+                { "key": "lng", "value": "-46.6845", "description": "Longitude do usuário" },
+                { "key": "radius_km", "value": "5", "description": "Raio de busca em quilômetros" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Consulta pontos de coleta próximos utilizando cálculo geoespacial PostGIS ST_DWithin / ST_Distance."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Buscar Pontos com Filtro de Categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/collection-points?lat=-23.5505&lng=-46.6333&radius_km=15&category=BATTERIES&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "collection-points"],
+              "query": [
+                { "key": "lat", "value": "-23.5505" },
+                { "key": "lng", "value": "-46.6333" },
+                { "key": "radius_km", "value": "15" },
+                { "key": "category", "value": "BATTERIES", "description": "Filtro por resíduo aceito" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Cadastrar Ponto de Coleta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ecoponto Sé\",\n  \"address\": \"Praça da Sé, 100, Centro - São Paulo/SP\",\n  \"latitude\": -23.550520,\n  \"longitude\": -46.633308,\n  \"accepted_categories\": [\"BATTERIES\", \"SMALL_APPLIANCES\"],\n  \"max_daily_capacity\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/collection-points",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "collection-points"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Consultar Ponto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/collection-points/{{createdPointId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "collection-points", "{{createdPointId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📅 Agendamentos",
+      "item": [
+        {
+          "name": "1. Criar Agendamento de Descarte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection_point_id\": \"7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4\",\n  \"user_name\": \"Ana Paula Silva\",\n  \"user_email\": \"ana.silva@exemplo.com\",\n  \"scheduled_date\": \"2026-10-15\",\n  \"waste_category\": \"BATTERIES\",\n  \"items_description\": \"2 notebooks antigos e 6 baterias de celular\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedules"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Atualizar Status do Agendamento (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedules/{{createdScheduleId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedules", "{{createdScheduleId}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Listar Agendamentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedules"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Erro Proposital: Data no Passado (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collection_point_id\": \"7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4\",\n  \"user_name\": \"Teste Data\",\n  \"user_email\": \"teste@exemplo.com\",\n  \"scheduled_date\": \"2020-01-01\",\n  \"waste_category\": \"BATTERIES\",\n  \"items_description\": \"Pilhas velhas\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedules"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Erro Proposital: Transição Inválida CANCELLED -> COMPLETED (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schedules/{{createdScheduleId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "schedules", "{{createdScheduleId}}", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

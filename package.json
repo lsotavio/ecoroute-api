@@ -1,0 +1,47 @@
+{
+  "name": "ecoroute-api",
+  "version": "1.0.0",
+  "description": "API RESTful para mapeamento inteligente e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste) alinhada ao ODS 11.",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:init": "tsx src/shared/database/init-db.ts",
+    "db:seed": "tsx src/shared/database/seed.ts"
+  },
+  "keywords": [
+    "ods11",
+    "e-waste",
+    "sustainability",
+    "postgis",
+    "fastify",
+    "typescript",
+    "zod",
+    "rest-api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^3.0.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "fastify-type-provider-zod": "^2.0.0",
+    "pg": "^8.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/pg": "^8.11.6",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.2",
+    "vitest": "^2.0.0"
+  }
+}
