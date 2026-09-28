@@ -36,7 +36,7 @@
         }
       }
     },
-    "/api/v1/collection-points/": {
+    "/api/v1/collection-points": {
       "get": {
         "summary": "Listar pontos de coleta próximos",
         "tags": [
@@ -151,7 +151,15 @@
                             "type": "boolean"
                           },
                           "created_at": {
-                            "type": "string"
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -302,7 +310,15 @@
                       "type": "boolean"
                     },
                     "created_at": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -381,7 +397,15 @@
                       "type": "boolean"
                     },
                     "created_at": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -402,7 +426,7 @@
         }
       }
     },
-    "/api/v1/schedules/": {
+    "/api/v1/schedules": {
       "post": {
         "summary": "Criar agendamento de descarte",
         "tags": [
@@ -482,7 +506,15 @@
                       "format": "email"
                     },
                     "scheduled_date": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     },
                     "waste_category": {
                       "type": "string"
@@ -500,7 +532,15 @@
                       ]
                     },
                     "created_at": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -586,7 +626,15 @@
                         "format": "email"
                       },
                       "scheduled_date": {
-                        "type": "string"
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        ]
                       },
                       "waste_category": {
                         "type": "string"
@@ -604,7 +652,15 @@
                         ]
                       },
                       "created_at": {
-                        "type": "string"
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -693,7 +749,15 @@
                       "format": "email"
                     },
                     "scheduled_date": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     },
                     "waste_category": {
                       "type": "string"
@@ -711,7 +775,15 @@
                       ]
                     },
                     "created_at": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -774,7 +846,15 @@
                       "format": "email"
                     },
                     "scheduled_date": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     },
                     "waste_category": {
                       "type": "string"
@@ -792,7 +872,15 @@
                       ]
                     },
                     "created_at": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      ]
                     }
                   },
                   "required": [

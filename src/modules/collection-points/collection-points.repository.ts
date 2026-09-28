@@ -55,7 +55,7 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
           accepted_categories,
           max_daily_capacity,
           is_active,
-          created_at,
+          TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
           ROUND((ST_Distance(location, ST_MakePoint($1, $2)::geography) / 1000)::numeric, 2)::float AS distance_km
       FROM collection_points
       WHERE is_active = true
@@ -109,7 +109,7 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
         accepted_categories,
         max_daily_capacity,
         is_active,
-        created_at
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
       FROM collection_points
       WHERE id = $1;
     `;
@@ -132,7 +132,7 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
         accepted_categories,
         max_daily_capacity,
         is_active,
-        created_at;
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at;
     `;
     const res = await dbProvider.query<CollectionPointItem>(sql, [
       point.name,

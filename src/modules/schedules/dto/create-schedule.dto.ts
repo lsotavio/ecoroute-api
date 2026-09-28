@@ -41,11 +41,11 @@ export const ScheduleResponseSchema = z.object({
   collection_point_id: z.string().uuid(),
   user_name: z.string(),
   user_email: z.string().email(),
-  scheduled_date: z.string(),
+  scheduled_date: z.union([z.string(), z.date()]),
   waste_category: z.string(),
   items_description: z.string(),
   status: ScheduleStatusEnum,
-  created_at: z.string().optional(),
+  created_at: z.union([z.string(), z.date()]).optional(),
 });
 
 export type ScheduleResponse = z.infer<typeof ScheduleResponseSchema>;

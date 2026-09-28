@@ -54,7 +54,7 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
         waste_category,
         items_description,
         status,
-        created_at;
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at;
     `;
 
     const res = await dbProvider.query<ScheduleItem>(sql, [
@@ -80,7 +80,7 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
         waste_category,
         items_description,
         status,
-        created_at
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
       FROM schedules
       WHERE id = $1;
     `;
@@ -114,7 +114,7 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
         waste_category,
         items_description,
         status,
-        created_at;
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at;
     `;
     const res = await dbProvider.query<ScheduleItem>(sql, [id, status]);
     return res.rows[0];
@@ -156,7 +156,7 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
         waste_category,
         items_description,
         status,
-        created_at
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
       FROM schedules
       ${whereClause}
       ORDER BY scheduled_date DESC, created_at DESC;

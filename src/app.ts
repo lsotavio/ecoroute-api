@@ -32,6 +32,7 @@ export interface BuildAppOptions {
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = fastify({
     logger: options.logger ?? false,
+    ignoreTrailingSlash: true,
   });
 
   // Type provider compilers

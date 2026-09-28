@@ -15,7 +15,10 @@ export const SearchPointsQuerySchema = z.object({
     .positive('O raio de busca deve ser maior que zero.')
     .max(100, 'O raio máximo de busca permitido é de 100 km.')
     .default(5.0),
-  category: z.string().optional(),
+  category: z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined)),
   page: z.coerce
     .number()
     .int()

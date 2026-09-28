@@ -55,7 +55,7 @@ export const CollectionPointResponseSchema = z.object({
   accepted_categories: z.array(z.string()),
   max_daily_capacity: z.number(),
   is_active: z.boolean(),
-  created_at: z.string().optional(),
+  created_at: z.union([z.string(), z.date()]).optional(),
 });
 
 export type CollectionPointResponse = z.infer<typeof CollectionPointResponseSchema>;
