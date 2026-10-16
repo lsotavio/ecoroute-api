@@ -304,52 +304,54 @@ export function App() {
       />
 
       <main className="main-container">
-        <section className="kpi-strip" aria-label="Indicadores operacionais">
-          <div className="kpi-card">
-            <span className="kpi-label">PEVs no Raio ({radiusKm} km)</span>
-            <strong className="kpi-value">{meta.total_items}</strong>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Capacidade Diária Ofertada</span>
-            <strong className="kpi-value">{totalCapacityInRadius} entregas/dia</strong>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Agendamentos Ativos</span>
-            <strong className="kpi-value">{activeSchedulesCount}</strong>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-label">Descartes Concluídos</span>
-            <strong className="kpi-value">{completedSchedulesCount}</strong>
-          </div>
-        </section>
-
         <FeedbackBanner feedback={feedback} onDismiss={() => setFeedback(null)} />
 
         {activeTab === 'points' && (
-          <CollectionPointsPanel
-            points={points}
-            meta={meta}
-            loading={loadingPoints}
-            lat={lat}
-            lng={lng}
-            radiusKm={radiusKm}
-            category={category}
-            onSearchChange={handleSearchChange}
-            onLookupById={handleLookupPointById}
-            onScheduleAtPoint={(point) => {
-              setPreselectedPointId(point.id);
-              setActiveTab('schedules');
-            }}
-            onEditPoint={(point) => {
-              setEditingPoint(point);
-              setActiveTab('point-form');
-            }}
-            onDeletePoint={handleDeletePoint}
-            onOpenCreatePoint={() => {
-              setEditingPoint(null);
-              setActiveTab('point-form');
-            }}
-          />
+          <>
+            <CollectionPointsPanel
+              points={points}
+              meta={meta}
+              loading={loadingPoints}
+              lat={lat}
+              lng={lng}
+              radiusKm={radiusKm}
+              category={category}
+              onSearchChange={handleSearchChange}
+              onLookupById={handleLookupPointById}
+              onScheduleAtPoint={(point) => {
+                setPreselectedPointId(point.id);
+                setActiveTab('schedules');
+              }}
+              onEditPoint={(point) => {
+                setEditingPoint(point);
+                setActiveTab('point-form');
+              }}
+              onDeletePoint={handleDeletePoint}
+              onOpenCreatePoint={() => {
+                setEditingPoint(null);
+                setActiveTab('point-form');
+              }}
+            />
+
+            <section className="kpi-strip" aria-label="Indicadores operacionais">
+              <div className="kpi-card">
+                <span className="kpi-label">PEVs no Raio ({radiusKm} km)</span>
+                <strong className="kpi-value">{meta.total_items}</strong>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-label">Capacidade Diária Ofertada</span>
+                <strong className="kpi-value">{totalCapacityInRadius} entregas/dia</strong>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-label">Agendamentos Ativos</span>
+                <strong className="kpi-value">{activeSchedulesCount}</strong>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-label">Descartes Concluídos</span>
+                <strong className="kpi-value">{completedSchedulesCount}</strong>
+              </div>
+            </section>
+          </>
         )}
 
         {activeTab === 'point-form' && (
