@@ -103,7 +103,7 @@ export function SpatialRadarMap({
         </div>
         {onRadiusChange && (
           <div className="radar-range-chips" aria-label="Ajustar raio de alcance">
-            {[5, 10, 15, 25].map((r) => (
+            {[5, 15, 50, 250].map((r) => (
               <button
                 key={r}
                 type="button"

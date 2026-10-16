@@ -31,11 +31,29 @@ interface CollectionPointsPanelProps {
 }
 
 const LOCATION_PRESETS = [
-  { label: 'Centro (Sé)', lat: -23.55052, lng: -46.633308 },
-  { label: 'Pinheiros', lat: -23.5678, lng: -46.6845 },
-  { label: 'Vila Mariana', lat: -23.5855, lng: -46.6391 },
-  { label: 'Mooca', lat: -23.5539, lng: -46.6022 },
-  { label: 'Santana', lat: -23.5042, lng: -46.6262 },
+  // Rio de Janeiro (RJ)
+  { label: 'RJ: Taquara / Jacarepaguá', lat: -22.9231, lng: -43.3641 },
+  { label: 'RJ: Madureira', lat: -22.8735, lng: -43.3392 },
+  { label: 'RJ: Centro (Praça XV)', lat: -22.9028, lng: -43.1729 },
+  { label: 'RJ: Copacabana', lat: -22.9691, lng: -43.1864 },
+  { label: 'RJ: Barra da Tijuca', lat: -22.9922, lng: -43.3644 },
+
+  // Rio Grande do Norte (RN)
+  { label: 'RN: Parnamirim Centro', lat: -5.9156, lng: -35.2628 },
+  { label: 'RN: Parnamirim (Cohabinal)', lat: -5.9221, lng: -35.2715 },
+  { label: 'RN: Natal (Capim Macio)', lat: -5.8562, lng: -35.2078 },
+
+  // São Paulo (SP)
+  { label: 'SP: Centro (Sé)', lat: -23.55052, lng: -46.633308 },
+  { label: 'SP: Pinheiros', lat: -23.5678, lng: -46.6845 },
+  { label: 'SP: Santana', lat: -23.5042, lng: -46.6262 },
+
+  // Outras Capitais
+  { label: 'Belo Horizonte (MG)', lat: -19.9328, lng: -43.9378 },
+  { label: 'Curitiba (PR)', lat: -25.4411, lng: -49.2789 },
+  { label: 'Brasília (DF)', lat: -15.7989, lng: -47.8828 },
+  { label: 'Salvador (BA)', lat: -13.0038, lng: -38.5284 },
+  { label: 'Recife (PE)', lat: -8.1189, lng: -34.9036 },
 ];
 
 export function CollectionPointsPanel({
@@ -85,13 +103,21 @@ export function CollectionPointsPanel({
 
   function handleUseBrowserGeolocation() {
     if (!('geolocation' in navigator)) {
+      alert('Geolocalização não suportada neste navegador.');
       return;
     }
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const currentLat = Number(pos.coords.latitude.toFixed(6));
-      const currentLng = Number(pos.coords.longitude.toFixed(6));
-      applyPreset(currentLat, currentLng);
-    });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const currentLat = Number(pos.coords.latitude.toFixed(6));
+        const currentLng = Number(pos.coords.longitude.toFixed(6));
+        applyPreset(currentLat, currentLng);
+      },
+      (err) => {
+        alert(
+          `Não foi possível obter a localização do dispositivo (${err.message}). Selecione um dos botões de coordenadas rápidas (RJ, RN, SP, etc.) ou digite as coordenadas manualmente.`
+        );
+      }
+    );
   }
 
   async function handleLookupSubmit(e: FormEvent) {
@@ -286,18 +312,31 @@ export function CollectionPointsPanel({
 
           {points.length === 0 ? (
             <div className="empty-state">
-              <p>Nenhum ponto de coleta encontrado para os filtros informados.</p>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setRadiusInput('25');
-                  setCategoryInput('');
-                  onSearchChange({ lat, lng, radiusKm: 25, category: '', page: 1 });
-                }}
-              >
-                Ampliar Raio para 25 km
-              </button>
+              <p>Nenhum ponto de coleta homologado encontrado em um raio de {radiusKm} km.</p>
+              <div className="empty-state-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setRadiusInput('50');
+                    setCategoryInput('');
+                    onSearchChange({ lat, lng, radiusKm: 50, category: '', page: 1 });
+                  }}
+                >
+                  Expandir Raio para 50 km
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setRadiusInput('250');
+                    setCategoryInput('');
+                    onSearchChange({ lat, lng, radiusKm: 250, category: '', page: 1 });
+                  }}
+                >
+                  Buscar em Raio Regional (250 km)
+                </button>
+              </div>
             </div>
           ) : (
             <div className="points-cards-stack">
