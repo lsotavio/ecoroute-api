@@ -13,6 +13,7 @@ import {
 import { CollectionPointForm } from './components/CollectionPointForm';
 import { CollectionPointsPanel } from './components/CollectionPointsPanel';
 import { FeedbackBanner, FeedbackState } from './components/FeedbackBanner';
+import { Footer } from './components/Footer';
 import { ActiveTab, Header } from './components/Header';
 import { SchedulesPanel } from './components/SchedulesPanel';
 
@@ -155,7 +156,7 @@ export function App() {
       setFeedback({
         kind: 'success',
         title: 'Ponto Localizado',
-        detail: `Detalhes do ponto '${point.name}' carregados via GET /api/v1/collection-points/${point.id}.`,
+        detail: `Detalhes da unidade '${point.name}' carregados com sucesso.`,
       });
     } catch (err) {
       setFeedback(toFeedbackError(err, 'Ponto de Coleta Não Encontrado'));
@@ -172,14 +173,14 @@ export function App() {
         setFeedback({
           kind: 'success',
           title: 'Ponto de Coleta Atualizado',
-          detail: `Unidade '${updated.name}' atualizada com sucesso via PUT /api/v1/collection-points/${updated.id}.`,
+          detail: `Unidade '${updated.name}' atualizada com sucesso.`,
         });
       } else {
         const created = await ecorouteApi.createPoint(payload);
         setFeedback({
           kind: 'success',
           title: 'Ponto de Coleta Cadastrado',
-          detail: `Unidade '${created.name}' registrada com ID ${created.id} via POST /api/v1/collection-points.`,
+          detail: `Unidade '${created.name}' cadastrada com sucesso.`,
         });
       }
       setEditingPoint(null);
@@ -203,7 +204,7 @@ export function App() {
       setFeedback({
         kind: 'success',
         title: 'Ponto de Coleta Removido',
-        detail: `O ponto '${point.name}' foi desativado via DELETE /api/v1/collection-points/${point.id}.`,
+        detail: `A unidade '${point.name}' foi desativada com sucesso.`,
       });
       await fetchPoints({ lat, lng, radiusKm, category, page: meta.page });
     } catch (err) {
@@ -217,8 +218,8 @@ export function App() {
       const created = await ecorouteApi.createSchedule(payload);
       setFeedback({
         kind: 'success',
-        title: 'Agendamento Confirmado na Fila',
-        detail: `Descarte registrado sob o protocolo ${created.id} para ${created.scheduled_date} (status: ${created.status}).`,
+        title: 'Agendamento Confirmado',
+        detail: `Descarte agendado com sucesso para ${created.scheduled_date}. Código: ${created.id}`,
       });
       await fetchSchedules();
       return true;
@@ -238,7 +239,7 @@ export function App() {
       setFeedback({
         kind: 'success',
         title: 'Agendamento Localizado',
-        detail: `Protocolo ${found.id} de ${found.user_name} recuperado via GET /api/v1/schedules/${found.id}.`,
+        detail: `Agendamento de ${found.user_name} recuperado com sucesso.`,
       });
     } catch (err) {
       setFeedback(toFeedbackError(err, 'Agendamento Não Encontrado'));
@@ -254,7 +255,7 @@ export function App() {
       setFeedback({
         kind: 'success',
         title: 'Status Atualizado',
-        detail: `Agendamento ${id.slice(0, 8)}... alterado para '${updated.status}' via PATCH /api/v1/schedules/${id}/status.`,
+        detail: `Status do agendamento alterado para '${updated.status}'.`,
       });
     } catch (err) {
       setFeedback(toFeedbackError(err, 'Transição de Status Inválida'));
@@ -268,7 +269,7 @@ export function App() {
       setFeedback({
         kind: 'success',
         title: 'Agendamento Excluído',
-        detail: `Registro ${id} removido via DELETE /api/v1/schedules/${id}.`,
+        detail: `Registro de agendamento removido com sucesso.`,
       });
     } catch (err) {
       setFeedback(toFeedbackError(err, 'Erro ao Excluir Agendamento'));
@@ -379,10 +380,15 @@ export function App() {
         )}
       </main>
 
-      <footer className="app-footer">
-        <span>EcoRoute — Plataforma de Logística Reversa Urbana (ODS 11.6)</span>
-        <span>Integração RESTful: GET, POST, PUT, PATCH, DELETE | Formato de Erros RFC 7807</span>
-      </footer>
+      <Footer
+        health={health}
+        onSelectTab={(tab) => {
+          if (tab !== 'point-form') {
+            setEditingPoint(null);
+          }
+          setActiveTab(tab);
+        }}
+      />
     </div>
   );
 }

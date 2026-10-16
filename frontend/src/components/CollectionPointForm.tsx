@@ -77,12 +77,12 @@ export function CollectionPointForm({
             <h2>
               {editingPoint
                 ? `Atualizar Ponto de Coleta (${editingPoint.name})`
-                : 'Cadastrar Novo Ponto de Entrega Voluntária (PEV)'}
+                : 'Cadastrar Novo Ponto de Coleta (PEV)'}
             </h2>
             <p className="text-muted">
               {editingPoint
-                ? `Envia requisição PUT /api/v1/collection-points/${editingPoint.id} com validação de esquema.`
-                : 'Envia requisição POST /api/v1/collection-points para registrar uma nova unidade homologada.'}
+                ? 'Atualize as informações cadastrais, localização e capacidade diária desta unidade.'
+                : 'Cadastre uma nova unidade homologada para recebimento de resíduos eletrônicos.'}
             </p>
           </div>
           <button type="button" className="btn btn-ghost" onClick={onCancel}>
@@ -136,7 +136,7 @@ export function CollectionPointForm({
 
           <div className="form-row-2col">
             <div className="form-field">
-              <label htmlFor="point-lat">Latitude (WGS 84)</label>
+              <label htmlFor="point-lat">Latitude</label>
               <input
                 id="point-lat"
                 type="number"
@@ -148,7 +148,7 @@ export function CollectionPointForm({
             </div>
 
             <div className="form-field">
-              <label htmlFor="point-lng">Longitude (WGS 84)</label>
+              <label htmlFor="point-lng">Longitude</label>
               <input
                 id="point-lng"
                 type="number"
@@ -173,7 +173,7 @@ export function CollectionPointForm({
                     onClick={() => toggleCategory(cat)}
                   >
                     <span>{WASTE_CATEGORY_LABELS[cat]}</span>
-                    <code>{cat}</code>
+                    <span className="category-code-tag">{cat}</span>
                   </button>
                 );
               })}
@@ -188,8 +188,8 @@ export function CollectionPointForm({
               {submitting
                 ? 'Processando...'
                 : editingPoint
-                ? 'Salvar Alterações (PUT)'
-                : 'Cadastrar Ponto de Coleta (POST)'}
+                ? 'Salvar Alterações'
+                : 'Cadastrar Ponto de Coleta'}
             </button>
           </div>
         </form>

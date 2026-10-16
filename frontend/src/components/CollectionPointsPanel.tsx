@@ -102,14 +102,25 @@ export function CollectionPointsPanel({
     await onLookupById(lookupId.trim());
   }
 
+  function handleRadiusChange(newRadius: number) {
+    setRadiusInput(String(newRadius));
+    onSearchChange({
+      lat: Number(latInput),
+      lng: Number(lngInput),
+      radiusKm: newRadius,
+      category: categoryInput,
+      page: 1,
+    });
+  }
+
   return (
     <section className="panel-section">
       <div className="card filter-card">
         <div className="card-header-row">
           <div>
-            <h2>Busca Geoespacial de Pontos de Coleta</h2>
+            <h2>Busca de Pontos de Coleta</h2>
             <p className="text-muted">
-              Consulte a API (<code>GET /api/v1/collection-points</code>) por coordenadas, raio em quilômetros e tipo de resíduo.
+              Localize pontos de coleta autorizados por coordenadas geográficas, raio de busca e categoria de resíduo.
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={onOpenCreatePoint}>
@@ -140,7 +151,7 @@ export function CollectionPointsPanel({
 
         <form className="search-grid-form" onSubmit={handleFilterSubmit}>
           <div className="form-field">
-            <label htmlFor="search-lat">Latitude (-90 a 90)</label>
+            <label htmlFor="search-lat">Latitude</label>
             <input
               id="search-lat"
               type="number"
@@ -152,7 +163,7 @@ export function CollectionPointsPanel({
           </div>
 
           <div className="form-field">
-            <label htmlFor="search-lng">Longitude (-180 a 180)</label>
+            <label htmlFor="search-lng">Longitude</label>
             <input
               id="search-lng"
               type="number"
@@ -201,11 +212,11 @@ export function CollectionPointsPanel({
         </form>
 
         <form className="lookup-bar" onSubmit={handleLookupSubmit}>
-          <label htmlFor="lookup-point-id">Consulta direta por UUID (`GET /:id`):</label>
+          <label htmlFor="lookup-point-id">Buscar ponto por código identificador (ID):</label>
           <input
             id="lookup-point-id"
             type="text"
-            placeholder="Ex: 7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4"
+            placeholder="Informe o identificador da unidade (ex: 7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4)"
             value={lookupId}
             onChange={(e) => setLookupId(e.target.value)}
           />
@@ -223,6 +234,8 @@ export function CollectionPointsPanel({
           points={points}
           selectedPointId={selectedPointId}
           onSelectPoint={(pt) => setSelectedPointId(pt.id)}
+          onScheduleAtPoint={onScheduleAtPoint}
+          onRadiusChange={handleRadiusChange}
         />
 
         <div className="points-list-column">
@@ -288,18 +301,23 @@ export function CollectionPointsPanel({
             </div>
           ) : (
             <div className="points-cards-stack">
-              {points.map((point) => {
+              {points.map((point, idx) => {
                 const isSelected = point.id === selectedPointId;
+                const pointIndex = idx + 1;
                 return (
                   <article
                     key={point.id}
+                    id={`point-card-${point.id}`}
                     className={`point-card ${isSelected ? 'point-card-selected' : ''}`}
                     onClick={() => setSelectedPointId(point.id)}
                   >
                     <div className="point-card-top">
-                      <div>
-                        <h3>{point.name}</h3>
-                        <p className="point-address">{point.address}</p>
+                      <div className="point-title-group">
+                        <span className="point-index-badge">#{pointIndex}</span>
+                        <div>
+                          <h3>{point.name}</h3>
+                          <p className="point-address">{point.address}</p>
+                        </div>
                       </div>
                       <div className="point-badges">
                         {point.distance_km !== undefined && (
@@ -318,7 +336,7 @@ export function CollectionPointsPanel({
                         Coordenadas: <code>{point.latitude.toFixed(5)}, {point.longitude.toFixed(5)}</code>
                       </span>
                       <span>
-                        ID: <code>{point.id}</code>
+                        Identificador: <code>{point.id}</code>
                       </span>
                     </div>
 
@@ -343,14 +361,14 @@ export function CollectionPointsPanel({
                         className="btn btn-secondary btn-sm"
                         onClick={() => onEditPoint(point)}
                       >
-                        Editar (PUT)
+                        Editar
                       </button>
                       <button
                         type="button"
                         className="btn btn-danger btn-sm"
                         onClick={() => onDeletePoint(point)}
                       >
-                        Excluir (DELETE)
+                        Excluir
                       </button>
                     </div>
                   </article>

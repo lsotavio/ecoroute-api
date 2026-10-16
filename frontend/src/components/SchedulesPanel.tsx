@@ -139,7 +139,7 @@ export function SchedulesPanel({
       <div className="card schedule-form-card">
         <h2>Novo Agendamento de Descarte</h2>
         <p className="text-muted">
-          Registra entrega (<code>POST /api/v1/schedules</code>) validando capacidade diária e compatibilidade de categoria.
+          Agende o descarte responsável de resíduos eletrônicos com verificação de capacidade operacional.
         </p>
 
         <form className="vertical-form" onSubmit={handleCreateSubmit}>
@@ -156,7 +156,7 @@ export function SchedulesPanel({
               </option>
               {points.map((pt) => (
                 <option key={pt.id} value={pt.id}>
-                  {pt.name} (Cap: {pt.max_daily_capacity}/dia)
+                  {pt.name} (Capacidade: {pt.max_daily_capacity}/dia)
                 </option>
               ))}
             </select>
@@ -164,11 +164,11 @@ export function SchedulesPanel({
 
           {selectedPoint && (
             <div className="selected-point-hint">
-              <strong>Categorias aceitas por {selectedPoint.name}:</strong>
+              <strong>Categorias aceitas em {selectedPoint.name}:</strong>
               <div className="category-tags">
                 {selectedPoint.accepted_categories.map((cat) => (
                   <span key={cat} className="category-pill">
-                    {WASTE_CATEGORY_LABELS[cat as WasteCategory] || cat} ({cat})
+                    {WASTE_CATEGORY_LABELS[cat as WasteCategory] || cat}
                   </span>
                 ))}
               </div>
@@ -176,7 +176,7 @@ export function SchedulesPanel({
           )}
 
           <div className="form-field">
-            <label htmlFor="sched-name">Nome Completo do Cidadão</label>
+            <label htmlFor="sched-name">Nome Completo</label>
             <input
               id="sched-name"
               type="text"
@@ -227,7 +227,7 @@ export function SchedulesPanel({
                     !selectedPoint || selectedPoint.accepted_categories.includes(cat);
                   return (
                     <option key={cat} value={cat}>
-                      {WASTE_CATEGORY_LABELS[cat]} {isAccepted ? '✓' : '(Não aceito no PEV)'}
+                      {WASTE_CATEGORY_LABELS[cat]} {isAccepted ? '✓' : '(Não aceito)'}
                     </option>
                   );
                 })}
@@ -243,14 +243,14 @@ export function SchedulesPanel({
               required
               minLength={3}
               maxLength={500}
-              placeholder="Ex: 2 notebooks antigos e 6 baterias de íon-lítio"
+              placeholder="Ex: 2 notebooks antigos e 6 baterias de celular"
               value={itemsDescription}
               onChange={(e) => setItemsDescription(e.target.value)}
             />
           </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-            {submitting ? 'Enviando...' : 'Confirmar Agendamento (POST)'}
+            {submitting ? 'Confirmando...' : 'Confirmar Agendamento'}
           </button>
         </form>
       </div>
@@ -261,10 +261,10 @@ export function SchedulesPanel({
             <div>
               <h2>Gestão de Agendamentos</h2>
               <p className="text-muted">
-                Consulte (<code>GET</code>), atualize status (<code>PATCH</code>) ou remova (<code>DELETE</code>) agendamentos.
+                Acompanhe o status e faça a gestão das coletas programadas.
               </p>
             </div>
-            <span className="badge-count">{schedules.length} registro(s)</span>
+            <span className="badge-count">{schedules.length} agendamento(s)</span>
           </div>
 
           <form className="search-grid-form schedules-filter-form" onSubmit={handleFilterSubmit}>
@@ -302,10 +302,10 @@ export function SchedulesPanel({
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
                 <option value="">Todos</option>
-                <option value="PENDING">Pendente (PENDING)</option>
-                <option value="CONFIRMED">Confirmado (CONFIRMED)</option>
-                <option value="COMPLETED">Concluído (COMPLETED)</option>
-                <option value="CANCELLED">Cancelado (CANCELLED)</option>
+                <option value="PENDING">Pendente</option>
+                <option value="CONFIRMED">Confirmado</option>
+                <option value="COMPLETED">Concluído</option>
+                <option value="CANCELLED">Cancelado</option>
               </select>
             </div>
 
@@ -325,11 +325,11 @@ export function SchedulesPanel({
           </form>
 
           <form className="lookup-bar" onSubmit={handleLookupSubmit}>
-            <label htmlFor="lookup-schedule-id">Buscar agendamento por UUID (`GET /:id`):</label>
+            <label htmlFor="lookup-schedule-id">Buscar agendamento por código (ID):</label>
             <input
               id="lookup-schedule-id"
               type="text"
-              placeholder="Ex: 2a3b4c5d-67ef-4890-8123-4ef5a6b7c8d9"
+              placeholder="Informe o código do agendamento (ex: 2a3b4c5d-67ef-4890-8123-4ef5a6b7c8d9)"
               value={lookupId}
               onChange={(e) => setLookupId(e.target.value)}
             />
@@ -350,22 +350,22 @@ export function SchedulesPanel({
                 <div className="schedule-card-header">
                   <div>
                     <span className={`status-pill status-${sched.status.toLowerCase()}`}>
-                      {SCHEDULE_STATUS_LABELS[sched.status]} ({sched.status})
+                      {SCHEDULE_STATUS_LABELS[sched.status]}
                     </span>
                     <h3>{resolvePointName(sched.collection_point_id)}</h3>
                   </div>
                   <div className="schedule-date-box">
-                    <span>Data de Entrega</span>
+                    <span>Data Prevista</span>
                     <strong>{sched.scheduled_date}</strong>
                   </div>
                 </div>
 
                 <div className="schedule-body-grid">
                   <div>
-                    <strong>Solicitante:</strong> {sched.user_name} ({sched.user_email})
+                    <strong>Cidadão:</strong> {sched.user_name} ({sched.user_email})
                   </div>
                   <div>
-                    <strong>Resíduo:</strong>{' '}
+                    <strong>Material:</strong>{' '}
                     <span className="category-pill">
                       {WASTE_CATEGORY_LABELS[sched.waste_category as WasteCategory] ||
                         sched.waste_category}
@@ -376,13 +376,13 @@ export function SchedulesPanel({
                   </div>
                   <div className="schedule-id-line">
                     <span>
-                      ID: <code>{sched.id}</code>
+                      Código: <code>{sched.id}</code>
                     </span>
                   </div>
                 </div>
 
                 <div className="schedule-actions-bar">
-                  <span className="actions-label">Transição de Status (PATCH):</span>
+                  <span className="actions-label">Alterar status:</span>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
@@ -416,7 +416,7 @@ export function SchedulesPanel({
                     className="btn btn-danger btn-sm"
                     onClick={() => onDeleteSchedule(sched.id)}
                   >
-                    Excluir (DELETE)
+                    Excluir
                   </button>
                 </div>
               </article>
