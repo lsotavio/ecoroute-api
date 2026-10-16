@@ -154,4 +154,53 @@ describe('Collection Points Module (/api/v1/collection-points)', () => {
       expect(body.status).toBe(404);
     });
   });
+
+  describe('PUT & DELETE /api/v1/collection-points/:id', () => {
+    it('deve atualizar um ponto de coleta existente (200 OK) e depois excluí-lo (204 No Content)', async () => {
+      const createdRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/collection-points',
+        payload: {
+          name: 'Ecoponto Temporário',
+          address: 'Rua Augusta, 1000, Consolação - São Paulo/SP',
+          latitude: -23.555,
+          longitude: -46.66,
+          accepted_categories: ['BATTERIES'],
+          max_daily_capacity: 15,
+        },
+      });
+      const created = JSON.parse(createdRes.payload);
+
+      const updateRes = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/collection-points/${created.id}`,
+        payload: {
+          name: 'Ecoponto Augusta Atualizado',
+          address: 'Rua Augusta, 1050, Consolação - São Paulo/SP',
+          latitude: -23.555,
+          longitude: -46.66,
+          accepted_categories: ['BATTERIES', 'MOBILE_PHONES'],
+          max_daily_capacity: 35,
+        },
+      });
+
+      expect(updateRes.statusCode).toBe(200);
+      const updated = JSON.parse(updateRes.payload);
+      expect(updated.name).toBe('Ecoponto Augusta Atualizado');
+      expect(updated.max_daily_capacity).toBe(35);
+      expect(updated.accepted_categories).toEqual(['BATTERIES', 'MOBILE_PHONES']);
+
+      const deleteRes = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/collection-points/${created.id}`,
+      });
+      expect(deleteRes.statusCode).toBe(204);
+
+      const getAfterDelete = await app.inject({
+        method: 'GET',
+        url: `/api/v1/collection-points/${created.id}`,
+      });
+      expect(getAfterDelete.statusCode).toBe(404);
+    });
+  });
 });

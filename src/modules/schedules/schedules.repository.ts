@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { dbProvider } from '../../shared/database/database.provider';
+import { SEED_SCHEDULES } from '../../shared/database/seed';
 import { ScheduleStatus } from './dto/create-schedule.dto';
 
 export interface ScheduleItem {
@@ -21,6 +22,7 @@ export interface ISchedulesRepository {
   findById(id: string): Promise<ScheduleItem | null>;
   countActiveByPointAndDate(pointId: string, date: string): Promise<number>;
   updateStatus(id: string, status: ScheduleStatus): Promise<ScheduleItem>;
+  delete(id: string): Promise<boolean>;
   list(filter?: {
     collection_point_id?: string;
     scheduled_date?: string;
@@ -28,9 +30,6 @@ export interface ISchedulesRepository {
   }): Promise<ScheduleItem[]>;
 }
 
-// ---------------------------------------------------------
-// 1. PostgreSQL Schedules Repository
-// ---------------------------------------------------------
 export class PostgresSchedulesRepository implements ISchedulesRepository {
   async create(
     schedule: Omit<ScheduleItem, 'id' | 'status' | 'created_at'>
@@ -120,6 +119,16 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
     return res.rows[0];
   }
 
+  async delete(id: string): Promise<boolean> {
+    const sql = `
+      DELETE FROM schedules
+      WHERE id = $1
+      RETURNING id;
+    `;
+    const res = await dbProvider.query<{ id: string }>(sql, [id]);
+    return res.rows.length > 0;
+  }
+
   async list(filter?: {
     collection_point_id?: string;
     scheduled_date?: string;
@@ -167,11 +176,15 @@ export class PostgresSchedulesRepository implements ISchedulesRepository {
   }
 }
 
-// ---------------------------------------------------------
-// 2. In-Memory Resilient Schedules Repository
-// ---------------------------------------------------------
 export class InMemorySchedulesRepository implements ISchedulesRepository {
   private items: ScheduleItem[] = [];
+
+  constructor(initialData: ScheduleItem[] = SEED_SCHEDULES) {
+    this.items = initialData.map((item) => ({
+      ...item,
+      created_at: item.created_at || new Date().toISOString(),
+    }));
+  }
 
   async create(
     schedule: Omit<ScheduleItem, 'id' | 'status' | 'created_at'>
@@ -215,6 +228,15 @@ export class InMemorySchedulesRepository implements ISchedulesRepository {
       status,
     };
     return { ...this.items[index] };
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const index = this.items.findIndex((item) => item.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.items.splice(index, 1);
+    return true;
   }
 
   async list(filter?: {

@@ -29,13 +29,17 @@ export interface ICollectionPointsRepository {
     params: SearchNearbyParams
   ): Promise<{ points: CollectionPointItem[]; total: number }>;
   findById(id: string): Promise<CollectionPointItem | null>;
-  create(point: Omit<CollectionPointItem, 'id' | 'is_active' | 'created_at'>): Promise<CollectionPointItem>;
+  create(
+    point: Omit<CollectionPointItem, 'id' | 'is_active' | 'created_at'>
+  ): Promise<CollectionPointItem>;
+  update(
+    id: string,
+    point: Omit<CollectionPointItem, 'id' | 'is_active' | 'created_at'>
+  ): Promise<CollectionPointItem | null>;
+  delete(id: string): Promise<boolean>;
   count(): Promise<number>;
 }
 
-// ---------------------------------------------------------
-// 1. PostGIS Production Implementation
-// ---------------------------------------------------------
 export class PostgresCollectionPointsRepository implements ICollectionPointsRepository {
   async searchNearby(
     params: SearchNearbyParams
@@ -44,7 +48,6 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
     const offset = (page - 1) * limit;
     const radiusMeters = radius_km * 1000;
 
-    // Exact SQL from Blueprint Section 6
     const querySql = `
       SELECT
           id,
@@ -111,7 +114,7 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
         is_active,
         TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
       FROM collection_points
-      WHERE id = $1;
+      WHERE id = $1 AND is_active = true;
     `;
     const res = await dbProvider.query<CollectionPointItem>(sql, [id]);
     return res.rows[0] || null;
@@ -145,15 +148,62 @@ export class PostgresCollectionPointsRepository implements ICollectionPointsRepo
     return res.rows[0];
   }
 
+  async update(
+    id: string,
+    point: Omit<CollectionPointItem, 'id' | 'is_active' | 'created_at'>
+  ): Promise<CollectionPointItem | null> {
+    const sql = `
+      UPDATE collection_points
+      SET
+        name = $2,
+        address = $3,
+        location = ST_MakePoint($4, $5)::geography,
+        accepted_categories = $6,
+        max_daily_capacity = $7
+      WHERE id = $1 AND is_active = true
+      RETURNING
+        id,
+        name,
+        address,
+        ST_Y(location::geometry)::float AS latitude,
+        ST_X(location::geometry)::float AS longitude,
+        accepted_categories,
+        max_daily_capacity,
+        is_active,
+        TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at;
+    `;
+    const res = await dbProvider.query<CollectionPointItem>(sql, [
+      id,
+      point.name,
+      point.address,
+      point.longitude,
+      point.latitude,
+      point.accepted_categories,
+      point.max_daily_capacity,
+    ]);
+    return res.rows[0] || null;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    // Soft-delete preserves foreign key integrity for existing schedules referencing this point
+    const sql = `
+      UPDATE collection_points
+      SET is_active = false
+      WHERE id = $1 AND is_active = true
+      RETURNING id;
+    `;
+    const res = await dbProvider.query<{ id: string }>(sql, [id]);
+    return res.rows.length > 0;
+  }
+
   async count(): Promise<number> {
-    const res = await dbProvider.query<{ count: string }>('SELECT COUNT(*) as count FROM collection_points');
+    const res = await dbProvider.query<{ count: string }>(
+      'SELECT COUNT(*) as count FROM collection_points WHERE is_active = true'
+    );
     return parseInt(res.rows[0].count, 10);
   }
 }
 
-// ---------------------------------------------------------
-// 2. In-Memory Resilient Implementation (Dev / Test / Standalone)
-// ---------------------------------------------------------
 export class InMemoryCollectionPointsRepository implements ICollectionPointsRepository {
   private items: CollectionPointItem[] = [];
 
@@ -164,14 +214,13 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
     }));
   }
 
-  // Haversine formula calculates geographical distance in kilometers
   private calculateHaversineDistance(
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number
   ): number {
-    const R = 6371; // Earth radius in km
+    const earthRadiusKm = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
@@ -181,7 +230,7 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return parseFloat((R * c).toFixed(2));
+    return parseFloat((earthRadiusKm * c).toFixed(2));
   }
 
   async searchNearby(
@@ -214,7 +263,6 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
       })
       .filter((pt) => pt.distance_km <= radius_km);
 
-    // Sort ascending by distance (same as ORDER BY distance_km ASC)
     withDistance.sort((a, b) => a.distance_km - b.distance_km);
 
     const total = withDistance.length;
@@ -225,7 +273,7 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
   }
 
   async findById(id: string): Promise<CollectionPointItem | null> {
-    const found = this.items.find((pt) => pt.id === id);
+    const found = this.items.find((pt) => pt.id === id && pt.is_active);
     return found ? { ...found } : null;
   }
 
@@ -247,8 +295,40 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
     return { ...newPoint };
   }
 
+  async update(
+    id: string,
+    point: Omit<CollectionPointItem, 'id' | 'is_active' | 'created_at'>
+  ): Promise<CollectionPointItem | null> {
+    const index = this.items.findIndex((pt) => pt.id === id && pt.is_active);
+    if (index === -1) {
+      return null;
+    }
+
+    const updated: CollectionPointItem = {
+      ...this.items[index],
+      name: point.name,
+      address: point.address,
+      latitude: point.latitude,
+      longitude: point.longitude,
+      accepted_categories: point.accepted_categories,
+      max_daily_capacity: point.max_daily_capacity,
+    };
+
+    this.items[index] = updated;
+    return { ...updated };
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const index = this.items.findIndex((pt) => pt.id === id && pt.is_active);
+    if (index === -1) {
+      return false;
+    }
+    this.items[index] = { ...this.items[index], is_active: false };
+    return true;
+  }
+
   async count(): Promise<number> {
-    return this.items.length;
+    return this.items.filter((pt) => pt.is_active).length;
   }
 
   public clear(): void {
@@ -260,7 +340,6 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
   }
 }
 
-// Factory to select active repository based on environment
 export function createCollectionPointsRepository(): ICollectionPointsRepository {
   const useInMemory =
     process.env.USE_IN_MEMORY_DB === 'true' || !process.env.DATABASE_URL;

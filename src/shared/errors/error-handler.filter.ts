@@ -9,14 +9,12 @@ export function errorHandlerFilter(
 ): void {
   const instance = request.raw.url || request.url;
 
-  // 1. If it's a known domain AppError
   if (error instanceof AppError) {
     const details = error.toProblemDetails(instance);
     reply.status(error.statusCode).send(details);
     return;
   }
 
-  // 2. If it's a Zod validation error
   if (error instanceof ZodError) {
     const invalidParams = error.issues.map((issue) => ({
       name: issue.path.join('.'),
@@ -37,7 +35,6 @@ export function errorHandlerFilter(
     return;
   }
 
-  // 3. If it's a Fastify Schema validation error
   if ('validation' in error && Array.isArray((error as FastifyError).validation)) {
     const fastifyErr = error as FastifyError;
     const invalidParams = (fastifyErr.validation || []).map((v) => ({
@@ -59,7 +56,6 @@ export function errorHandlerFilter(
     return;
   }
 
-  // 4. Default Internal Server Error
   request.log.error(error);
 
   const problem: ProblemDetails = {

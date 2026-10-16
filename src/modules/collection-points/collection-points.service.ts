@@ -39,8 +39,7 @@ export class CollectionPointsService {
     return paginated;
   }
 
-  async createPoint(data: CreatePointInput): Promise<CollectionPointItem> {
-    // Coordinate sanity check
+  private validateAndNormalizeInput(data: CreatePointInput) {
     if (data.latitude < -90 || data.latitude > 90) {
       throw AppError.unprocessableEntity(
         'A latitude deve estar no intervalo entre -90 e 90 graus.',
@@ -55,21 +54,45 @@ export class CollectionPointsService {
       );
     }
 
-    // Capitalize categories
     const normalizedCategories = data.accepted_categories.map((c) =>
       c.trim().toUpperCase()
     );
 
-    const point = await this.repository.create({
+    return {
       name: data.name.trim(),
       address: data.address.trim(),
       latitude: data.latitude,
       longitude: data.longitude,
       accepted_categories: normalizedCategories,
       max_daily_capacity: data.max_daily_capacity,
-    });
+    };
+  }
 
-    return point;
+  async createPoint(data: CreatePointInput): Promise<CollectionPointItem> {
+    const normalized = this.validateAndNormalizeInput(data);
+    return this.repository.create(normalized);
+  }
+
+  async updatePoint(id: string, data: CreatePointInput): Promise<CollectionPointItem> {
+    const normalized = this.validateAndNormalizeInput(data);
+    const updated = await this.repository.update(id, normalized);
+    if (!updated) {
+      throw AppError.notFound(
+        `Ponto de coleta com ID '${id}' não foi encontrado.`,
+        'https://api.ecoroute.com/errors/point-not-found'
+      );
+    }
+    return updated;
+  }
+
+  async deletePoint(id: string): Promise<void> {
+    const deleted = await this.repository.delete(id);
+    if (!deleted) {
+      throw AppError.notFound(
+        `Ponto de coleta com ID '${id}' não foi encontrado.`,
+        'https://api.ecoroute.com/errors/point-not-found'
+      );
+    }
   }
 
   async getPointById(id: string): Promise<CollectionPointItem> {

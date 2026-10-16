@@ -35,13 +35,12 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     ignoreTrailingSlash: true,
   });
 
-  // Type provider compilers
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Security Plugins
+  // Content Security Policy is disabled to allow Swagger UI inline assets to execute
   await app.register(helmet, {
-    contentSecurityPolicy: false, // Allows Swagger UI to load resources
+    contentSecurityPolicy: false,
   });
 
   await app.register(cors, {
@@ -49,14 +48,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
-  // Swagger Documentation Setup
   await app.register(fastifySwagger, {
     openapi: {
       openapi: '3.0.3',
       info: {
         title: 'EcoRoute API',
         description:
-          'API RESTful para mapeamento inteligente e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste), com suporte a consultas geoespaciais e controle de capacidade operacional. Projeto alinhado ao ODS 11 (Cidades e Comunidades Sustentáveis) - Meta 11.6.',
+          'API RESTful para mapeamento geoespacial e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste). Projeto alinhado ao ODS 11 (Cidades e Comunidades Sustentáveis) - Meta 11.6.',
         version: '1.0.0',
         contact: {
           name: 'Equipe EcoRoute',
@@ -96,17 +94,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     staticCSP: true,
   });
 
-  // Global Error Handler (RFC 7807)
   app.setErrorHandler(errorHandlerFilter);
 
-  // Repositories and Services
   const pointsRepository = options.pointsRepo || createCollectionPointsRepository();
   const schedulesRepository = options.schedulesRepo || createSchedulesRepository();
 
   const pointsService = new CollectionPointsService(pointsRepository);
   const schedulesService = new SchedulesService(schedulesRepository, pointsRepository);
 
-  // Healthcheck Route
   app.get(
     '/api/v1/health',
     {
@@ -116,7 +111,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         tags: ['Sistema'],
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       const isDbConnected = await dbProvider.checkConnection();
       return reply.status(200).send({
         status: 'UP',
@@ -132,12 +127,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     }
   );
 
-  // Root redirect to docs
-  app.get('/', async (request, reply) => {
+  app.get('/', async (_request, reply) => {
     return reply.redirect('/api/docs');
   });
 
-  // Register Modules
   await app.register(createCollectionPointsRoutes(pointsService), {
     prefix: '/api/v1/collection-points',
   });

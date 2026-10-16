@@ -16,7 +16,6 @@ export class SchedulesService {
   ) {}
 
   async createSchedule(data: CreateScheduleInput): Promise<ScheduleItem> {
-    // 1. Validate date (cannot be in the past)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -38,7 +37,6 @@ export class SchedulesService {
       );
     }
 
-    // 2. Check if collection point exists and is active
     const point = await this.pointsRepo.findById(data.collection_point_id);
     if (!point || !point.is_active) {
       throw AppError.notFound(
@@ -47,7 +45,6 @@ export class SchedulesService {
       );
     }
 
-    // 3. Check if waste category is accepted by collection point
     const normalizedCategory = data.waste_category.trim().toUpperCase();
     const isCategoryAccepted = point.accepted_categories.some(
       (cat) => cat.trim().toUpperCase() === normalizedCategory
@@ -60,7 +57,6 @@ export class SchedulesService {
       );
     }
 
-    // 4. Validate daily capacity
     const activeSchedulesCount =
       await this.schedulesRepo.countActiveByPointAndDate(
         point.id,
@@ -74,8 +70,7 @@ export class SchedulesService {
       );
     }
 
-    // 5. Create schedule
-    const schedule = await this.schedulesRepo.create({
+    return this.schedulesRepo.create({
       collection_point_id: point.id,
       user_name: data.user_name.trim(),
       user_email: data.user_email.trim().toLowerCase(),
@@ -83,8 +78,6 @@ export class SchedulesService {
       waste_category: normalizedCategory,
       items_description: data.items_description.trim(),
     });
-
-    return schedule;
   }
 
   async updateStatus(id: string, newStatus: ScheduleStatus): Promise<ScheduleItem> {
@@ -96,10 +89,19 @@ export class SchedulesService {
       );
     }
 
-    // Validate state transitions
     this.validateStatusTransition(existing.status, newStatus);
 
     return this.schedulesRepo.updateStatus(id, newStatus);
+  }
+
+  async deleteSchedule(id: string): Promise<void> {
+    const deleted = await this.schedulesRepo.delete(id);
+    if (!deleted) {
+      throw AppError.notFound(
+        `Agendamento com ID '${id}' não foi encontrado.`,
+        'https://api.ecoroute.com/errors/schedule-not-found'
+      );
+    }
   }
 
   async getScheduleById(id: string): Promise<ScheduleItem> {
@@ -129,7 +131,6 @@ export class SchedulesService {
       return;
     }
 
-    // Rule: Cancelled schedules cannot be reactivated or completed
     if (currentStatus === 'CANCELLED') {
       throw AppError.badRequest(
         `Não é permitida a transição de estado de '${currentStatus}' para '${newStatus}'.`,
@@ -137,7 +138,6 @@ export class SchedulesService {
       );
     }
 
-    // Rule: Completed schedules cannot be cancelled or reset
     if (currentStatus === 'COMPLETED' && (newStatus === 'PENDING' || newStatus === 'CONFIRMED')) {
       throw AppError.badRequest(
         `Não é permitida a transição de um agendamento já concluído ('COMPLETED') para '${newStatus}'.`,

@@ -1,11 +1,13 @@
 {
   "name": "ecoroute-api",
-  "version": "1.0.0",
-  "description": "API RESTful para mapeamento inteligente e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste) alinhada ao ODS 11.",
+  "version": "1.1.0",
+  "description": "Sistema full-stack (API RESTful e interface React) para mapeamento geoespacial de pontos de coleta e agendamento de descarte de resíduos eletroeletrônicos (ODS 11.6).",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
     "build": "tsc",
+    "build:frontend": "npm --prefix frontend run build",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -18,6 +20,7 @@
     "sustainability",
     "postgis",
     "fastify",
+    "react",
     "typescript",
     "zod",
     "rest-api"

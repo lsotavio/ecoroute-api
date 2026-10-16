@@ -17,7 +17,10 @@ export function createCollectionPointsRoutes(
   return async (app: FastifyInstance) => {
     const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-    // GET /api/v1/collection-points
+    const pointIdParamsSchema = z.object({
+      id: z.string().uuid('O identificador deve ser um UUID válido.'),
+    });
+
     typedApp.get(
       '/',
       {
@@ -38,7 +41,6 @@ export function createCollectionPointsRoutes(
       }
     );
 
-    // POST /api/v1/collection-points
     typedApp.post(
       '/',
       {
@@ -58,7 +60,6 @@ export function createCollectionPointsRoutes(
       }
     );
 
-    // GET /api/v1/collection-points/:id
     typedApp.get(
       '/:id',
       {
@@ -66,9 +67,7 @@ export function createCollectionPointsRoutes(
           summary: 'Consultar ponto de coleta por ID',
           description: 'Recupera detalhes cadastrais de um ponto de coleta específico.',
           tags: ['Pontos de Coleta'],
-          params: z.object({
-            id: z.string().uuid('O identificador deve ser um UUID válido.'),
-          }),
+          params: pointIdParamsSchema,
           response: {
             200: CollectionPointResponseSchema,
           },
@@ -77,6 +76,45 @@ export function createCollectionPointsRoutes(
       async (request, reply) => {
         const point = await service.getPointById(request.params.id);
         return reply.status(200).send(point);
+      }
+    );
+
+    typedApp.put(
+      '/:id',
+      {
+        schema: {
+          summary: 'Atualizar ponto de coleta',
+          description: 'Atualiza os dados cadastrais e operacionais de um ponto de coleta.',
+          tags: ['Pontos de Coleta'],
+          params: pointIdParamsSchema,
+          body: CreatePointSchema,
+          response: {
+            200: CollectionPointResponseSchema,
+          },
+        },
+      },
+      async (request, reply) => {
+        const updated = await service.updatePoint(request.params.id, request.body);
+        return reply.status(200).send(updated);
+      }
+    );
+
+    typedApp.delete(
+      '/:id',
+      {
+        schema: {
+          summary: 'Remover ponto de coleta',
+          description: 'Desativa e remove um ponto de coleta das buscas ativas.',
+          tags: ['Pontos de Coleta'],
+          params: pointIdParamsSchema,
+          response: {
+            204: z.null(),
+          },
+        },
+      },
+      async (request, reply) => {
+        await service.deletePoint(request.params.id);
+        return reply.status(204).send(null);
       }
     );
   };

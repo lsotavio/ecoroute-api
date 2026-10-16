@@ -239,17 +239,30 @@ describe('Schedules Module (/api/v1/schedules)', () => {
     });
   });
 
-  describe('GET /api/v1/schedules', () => {
-    it('deve listar agendamentos existentes', async () => {
-      const response = await app.inject({
+  describe('GET & DELETE /api/v1/schedules', () => {
+    it('deve listar agendamentos existentes e permitir exclusão por ID (204 No Content)', async () => {
+      const listResponse = await app.inject({
         method: 'GET',
         url: '/api/v1/schedules',
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.payload);
+      expect(listResponse.statusCode).toBe(200);
+      const body = JSON.parse(listResponse.payload);
       expect(Array.isArray(body)).toBe(true);
       expect(body.length).toBeGreaterThan(0);
+
+      const targetId = body[0].id;
+      const deleteResponse = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/schedules/${targetId}`,
+      });
+      expect(deleteResponse.statusCode).toBe(204);
+
+      const getDeleted = await app.inject({
+        method: 'GET',
+        url: `/api/v1/schedules/${targetId}`,
+      });
+      expect(getDeleted.statusCode).toBe(404);
     });
   });
 });

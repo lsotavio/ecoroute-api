@@ -53,14 +53,35 @@ export const SEED_COLLECTION_POINTS = [
   },
 ];
 
+export const SEED_SCHEDULES = [
+  {
+    id: '2a3b4c5d-67ef-4890-8123-4ef5a6b7c8d9',
+    collection_point_id: '7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4',
+    user_name: 'Beatriz Oliveira',
+    user_email: 'beatriz.oliveira@exemplo.com',
+    scheduled_date: '2026-10-20',
+    waste_category: 'BATTERIES',
+    items_description: '4 baterias de notebook e 12 pilhas recarregáveis',
+    status: 'CONFIRMED' as const,
+  },
+  {
+    id: '3b4c5d6e-78fa-4901-9234-5fa6b7c8d9e0',
+    collection_point_id: '9b0d1a8c-34cd-6e5f-0a67-1bc0d9e8f7a6',
+    user_name: 'Rafael Costa',
+    user_email: 'rafael.costa@exemplo.com',
+    scheduled_date: '2026-10-22',
+    waste_category: 'COMPUTERS',
+    items_description: '1 gabinete desktop, 2 teclados USB e 1 fonte ATX',
+    status: 'PENDING' as const,
+  },
+];
+
 export async function seedDatabase(): Promise<void> {
   const isHealthy = await dbProvider.checkConnection();
   if (!isHealthy) {
-    console.warn('⚠️ PostgreSQL não disponível. Os dados de semente serão carregados em memória.');
+    console.warn('PostgreSQL indisponível. Dados iniciais carregados em memória.');
     return;
   }
-
-  console.log('🌱 Populando pontos de coleta de exemplo no PostgreSQL...');
 
   for (const point of SEED_COLLECTION_POINTS) {
     await dbProvider.query(
@@ -88,13 +109,30 @@ export async function seedDatabase(): Promise<void> {
     );
   }
 
-  console.log('✅ Seed executado com sucesso no PostgreSQL!');
+  for (const schedule of SEED_SCHEDULES) {
+    await dbProvider.query(
+      `
+      INSERT INTO schedules (id, collection_point_id, user_name, user_email, scheduled_date, waste_category, items_description, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (id) DO NOTHING;
+      `,
+      [
+        schedule.id,
+        schedule.collection_point_id,
+        schedule.user_name,
+        schedule.user_email,
+        schedule.scheduled_date,
+        schedule.waste_category,
+        schedule.items_description,
+        schedule.status,
+      ]
+    );
+  }
 }
 
 if (require.main === module) {
   seedDatabase()
     .then(() => {
-      console.log('Finalizado.');
       process.exit(0);
     })
     .catch((err) => {

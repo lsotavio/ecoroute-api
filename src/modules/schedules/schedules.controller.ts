@@ -16,7 +16,6 @@ export function createSchedulesRoutes(service: SchedulesService): FastifyPluginA
   return async (app: FastifyInstance) => {
     const typedApp = app.withTypeProvider<ZodTypeProvider>();
 
-    // POST /api/v1/schedules
     typedApp.post(
       '/',
       {
@@ -37,7 +36,6 @@ export function createSchedulesRoutes(service: SchedulesService): FastifyPluginA
       }
     );
 
-    // PATCH /api/v1/schedules/:id/status
     typedApp.patch(
       '/:id/status',
       {
@@ -62,7 +60,6 @@ export function createSchedulesRoutes(service: SchedulesService): FastifyPluginA
       }
     );
 
-    // GET /api/v1/schedules/:id
     typedApp.get(
       '/:id',
       {
@@ -82,7 +79,6 @@ export function createSchedulesRoutes(service: SchedulesService): FastifyPluginA
       }
     );
 
-    // GET /api/v1/schedules
     typedApp.get(
       '/',
       {
@@ -106,6 +102,25 @@ export function createSchedulesRoutes(service: SchedulesService): FastifyPluginA
       async (request, reply) => {
         const list = await service.listSchedules(request.query);
         return reply.status(200).send(list);
+      }
+    );
+
+    typedApp.delete(
+      '/:id',
+      {
+        schema: {
+          summary: 'Remover agendamento',
+          description: 'Remove permanentemente o registro de um agendamento de descarte.',
+          tags: ['Agendamentos'],
+          params: UpdateScheduleParamsSchema,
+          response: {
+            204: z.null(),
+          },
+        },
+      },
+      async (request, reply) => {
+        await service.deleteSchedule(request.params.id);
+        return reply.status(204).send(null);
       }
     );
   };

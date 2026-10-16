@@ -1,117 +1,44 @@
-# EcoRoute API
+# EcoRoute
 
-API RESTful para mapeamento geoespacial de Pontos de Entrega Voluntária (PEV) e agendamento de descarte responsável de resíduos eletroeletrônicos (e-waste).
+## Visão Geral
 
-O projeto é baseado no **ODS 11 (Cidades e Comunidades Sustentáveis)** da ONU, especificamente na **Meta 11.6**, com foco na redução do impacto ambiental urbano por meio do descarte correto de lixo eletrônico.
+Aplicação full-stack composta por API RESTful (Node.js, Fastify, PostgreSQL/PostGIS) e interface web (React, TypeScript) para localização geoespacial de Pontos de Entrega Voluntária (PEV) e agendamento de descarte de resíduos eletroeletrônicos. O sistema atende à Meta 11.6 do ODS 11 da ONU por meio de controle de capacidade diária de coleta e validação de compatibilidade por categoria de resíduo.
 
----
+## Início Rápido
 
-## Tecnologias
-
-- **Runtime:** Node.js (TypeScript)
-- **Framework Web:** Fastify com Zod (validação e tipagem de schemas)
-- **Banco de Dados:** PostgreSQL com extensão PostGIS (consultas geoespaciais indexadas)
-- **Documentação:** Swagger (OpenAPI 3.0) e Postman
-- **Testes:** Vitest
-- **Containerização:** Docker e Docker Compose
-
----
-
-## Estrutura do Projeto
-
-```text
-src/
-├── modules/
-│   ├── collection-points/     # Gestão e busca de pontos de coleta
-│   │   ├── dto/
-│   │   ├── collection-points.controller.ts
-│   │   ├── collection-points.service.ts
-│   │   └── collection-points.repository.ts
-│   └── schedules/             # Agendamento e validação de capacidade diária
-│       ├── dto/
-│       ├── schedules.controller.ts
-│       ├── schedules.service.ts
-│       └── schedules.repository.ts
-├── shared/
-│   ├── database/              # Conexão, migrations DDL e seeders
-│   ├── errors/                # Formato RFC 7807 (Problem Details)
-│   └── utils/
-├── app.ts
-└── server.ts
+```bash
+npm install
+npm --prefix frontend install
+npm test
+npm run dev
 ```
 
----
+Em um segundo terminal, inicie a interface Front-End:
 
-## Como Executar
+```bash
+npm run dev:frontend
+```
 
-### Opção 1: Via Docker Compose (Recomendado)
-
-Inicia a API e o PostgreSQL com PostGIS configurado:
+Execução alternativa via containers Docker (PostgreSQL + PostGIS + API):
 
 ```bash
 docker compose up --build -d
 ```
 
-A API estará acessível em `http://localhost:3000`.
+## Configuração
 
-### Opção 2: Localmente com Node.js
+| Variável | Tipo | Obrigatório | Padrão | Descrição |
+| :--- | :--- | :--- | :--- | :--- |
+| `PORT` | `number` | Não | `3000` | Porta TCP de escuta do servidor HTTP da API |
+| `HOST` | `string` | Não | `0.0.0.0` | Endereço de interface de rede vinculado pelo Fastify |
+| `NODE_ENV` | `string` | Não | `development` | Ambiente de execução (`development`, `test`, `production`) |
+| `DATABASE_URL` | `string` | Não | `""` | URI de conexão PostgreSQL com extensão PostGIS |
+| `USE_IN_MEMORY_DB` | `boolean` | Não | `true` | Ativa repositório em memória com cálculo Haversine quando PostgreSQL não está configurado |
+| `VITE_API_BASE_URL` | `string` | Não | `http://localhost:3000` | URL base da API consumida pelo cliente HTTP do Front-End |
 
-Requisitos: Node.js 20+ e npm.
+## Decisões de Arquitetura
 
-```bash
-npm install
-npm run dev
-```
-
-*Nota: Caso o PostgreSQL não esteja rodando localmente, a aplicação inicializa automaticamente com um repositório em memória e dados de teste pré-carregados.*
-
----
-
-## Endpoints
-
-### Pontos de Coleta
-
-| Método | Rota | Descrição |
-| :--- | :--- | :--- |
-| `GET` | `/api/v1/collection-points` | Busca pontos próximos por latitude, longitude e raio (km) |
-| `POST` | `/api/v1/collection-points` | Cadastra novo ponto de coleta |
-| `GET` | `/api/v1/collection-points/:id` | Consulta detalhes de um ponto de coleta por ID |
-
-### Agendamentos
-
-| Método | Rota | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/api/v1/schedules` | Cria agendamento validando cotas diárias e materiais aceitos |
-| `PATCH` | `/api/v1/schedules/:id/status` | Atualiza o status (`PENDING`, `CONFIRMED`, `COMPLETED`, `CANCELLED`) |
-| `GET` | `/api/v1/schedules/:id` | Consulta agendamento por ID |
-| `GET` | `/api/v1/schedules` | Lista agendamentos cadastrados |
-
-### Sistema
-
-| Método | Rota | Descrição |
-| :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Status da API e verificação de conexão com o banco |
-
----
-
-## Documentação
-
-- **Swagger UI:** Disponível em `http://localhost:3000/api/docs` com a API em execução.
-- **Postman:** Coleção disponível para importação em `docs/ecoroute_api.postman_collection.json`.
-- **OpenAPI Spec:** Arquivo exportado em `docs/swagger.json`.
-
----
-
-## Testes
-
-Suíte de testes automatizados com cobertura de regras de negócio, cálculos de distância e validações:
-
-```bash
-npm test
-```
-
----
-
-## Licença
-
-Distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+- **Polimorfismo de Repositório (PostGIS e In-Memory):** A camada de persistência implementa consultas espaciais via índice `GIST` (`ST_DWithin` e `ST_Distance`) no PostgreSQL/PostGIS e mantém implementação equivalente em memória baseada na fórmula de Haversine para execução local e testes determinísticos sem dependência obrigatória de container externo.
+- **Cliente HTTP Nativo com Validação de Perímetro (Fail Fast):** O Front-End utiliza a API nativa `fetch` sem bibliotecas HTTP de terceiros, validando os esquemas de entrada e saída na fronteira de rede antes de atualizar o estado da interface.
+- **Padronização de Erros RFC 7807 (Problem Details):** Erros de validação (HTTP 422), conflitos de cota diária (HTTP 409), transições de estado inválidas (HTTP 400) e recursos inexistentes (HTTP 404) retornam objetos tipados consumidos diretamente pelo componente de feedback do Front-End.
+- **Exclusão Lógica em Pontos de Coleta:** A operação `DELETE /api/v1/collection-points/:id` desativa o ponto (`is_active = false`) para preservar a integridade referencial do histórico de agendamentos vinculados.
