@@ -9,8 +9,10 @@ describe('Schedules Module (/api/v1/schedules)', () => {
   let pointsRepo: InMemoryCollectionPointsRepository;
   let schedulesRepo: InMemorySchedulesRepository;
 
-  // Use a future date for valid tests
-  const futureDate = '2026-10-15';
+  // Use a dynamic future date for valid tests
+  const now = new Date();
+  now.setDate(now.getDate() + 7);
+  const futureDate = now.toISOString().split('T')[0];
   const validPointId = '7f8b9e6a-12ab-4c3d-8e45-f9a8b7c6d5e4'; // Ecoponto Pinheiros (BATTERIES, DISPLAYS, CABLES, cap: 25)
 
   beforeAll(async () => {

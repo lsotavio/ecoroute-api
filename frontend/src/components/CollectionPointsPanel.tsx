@@ -6,7 +6,7 @@ import {
   WASTE_CATEGORY_LABELS,
   WasteCategory,
 } from '../api';
-import { POPULAR_LOCATIONS, lookupCepLocation } from '../geocoding';
+import { BRAZILIAN_CAPITALS, lookupCepLocation } from '../geocoding';
 import { SpatialRadarMap } from './SpatialRadarMap';
 
 interface CollectionPointsPanelProps {
@@ -31,6 +31,8 @@ interface CollectionPointsPanelProps {
   onOpenCreatePoint: () => void;
 }
 
+type SearchMode = 'cep' | 'capital';
+
 export function CollectionPointsPanel({
   points,
   meta,
@@ -46,7 +48,7 @@ export function CollectionPointsPanel({
   onDeletePoint,
   onOpenCreatePoint,
 }: CollectionPointsPanelProps) {
-  // Coordenadas internas e filtros
+  // Estado dos filtros
   const [latInput, setLatInput] = useState(String(lat));
   const [lngInput, setLngInput] = useState(String(lng));
   const [radiusInput, setRadiusInput] = useState(String(radiusKm));
@@ -54,57 +56,51 @@ export function CollectionPointsPanel({
   const [lookupId, setLookupId] = useState('');
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
-  // Localização brasileira para usuário final
+  // Modo de busca
+  const [searchMode, setSearchMode] = useState<SearchMode>('cep');
+
+  // Busca por CEP
   const [cepInput, setCepInput] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
-  const [cepStatusMessage, setCepStatusMessage] = useState<string | null>(null);
-  const [cepStatusType, setCepStatusType] = useState<'success' | 'error' | null>(null);
+  const [cepFeedback, setCepFeedback] = useState<{ text: string; isError: boolean } | null>(null);
   const [activeLocationLabel, setActiveLocationLabel] = useState<string>('Rio de Janeiro - RJ (Taquara)');
 
-  // Seleção hierárquica por Estado / Cidade / Bairro
-  const [selectedUf, setSelectedUf] = useState('RJ');
-  const [selectedCity, setSelectedCity] = useState('Rio de Janeiro');
+  // Busca por Capital e Bairro
+  const [selectedCapitalUf, setSelectedCapitalUf] = useState('RJ');
   const [selectedBairro, setSelectedBairro] = useState('Taquara / Jacarepaguá');
 
-  // Mantém os campos de entrada sincronizados quando as props mudam
+  // Sincroniza parâmetros quando alterados externamente
   useEffect(() => {
     setLatInput(String(lat));
     setLngInput(String(lng));
     setRadiusInput(String(radiusKm));
   }, [lat, lng, radiusKm]);
 
-  // Lista de UFs disponíveis nas localidades pré-mapeadas
-  const availableUfs = Array.from(new Set(POPULAR_LOCATIONS.map((loc) => loc.uf)));
+  // Capital atualmente selecionada
+  const currentCapital =
+    BRAZILIAN_CAPITALS.find((c) => c.uf === selectedCapitalUf) || BRAZILIAN_CAPITALS[0];
+  const availableBairros = currentCapital.bairros || [];
 
-  // Cidades do Estado selecionado
-  const availableCities = POPULAR_LOCATIONS.filter((loc) => loc.uf === selectedUf);
+  // Regiões para optgroup
+  const regions: Array<'Sudeste' | 'Sul' | 'Centro-Oeste' | 'Nordeste' | 'Norte'> = [
+    'Sudeste',
+    'Sul',
+    'Centro-Oeste',
+    'Nordeste',
+    'Norte',
+  ];
 
-  // Bairros da Cidade selecionada
-  const currentCityOption =
-    availableCities.find((c) => c.cidade === selectedCity) || availableCities[0];
-  const availableBairros = currentCityOption ? currentCityOption.bairros : [];
-
-  function handleUfChange(newUf: string) {
-    setSelectedUf(newUf);
-    const citiesForUf = POPULAR_LOCATIONS.filter((loc) => loc.uf === newUf);
-    if (citiesForUf.length > 0) {
-      setSelectedCity(citiesForUf[0].cidade);
-      if (citiesForUf[0].bairros.length > 0) {
-        setSelectedBairro(citiesForUf[0].bairros[0].nome);
-      }
-    }
-  }
-
-  function handleCityChange(newCity: string) {
-    setSelectedCity(newCity);
-    const cityOpt = availableCities.find((c) => c.cidade === newCity);
-    if (cityOpt && cityOpt.bairros.length > 0) {
-      setSelectedBairro(cityOpt.bairros[0].nome);
+  function handleCapitalChange(newUf: string) {
+    setSelectedCapitalUf(newUf);
+    const capital = BRAZILIAN_CAPITALS.find((c) => c.uf === newUf);
+    if (capital && capital.bairros && capital.bairros.length > 0) {
+      setSelectedBairro(capital.bairros[0].nome);
+    } else {
+      setSelectedBairro('');
     }
   }
 
   function handleCepInputChange(rawVal: string) {
-    // Permite apenas dígitos e hífen
     let clean = rawVal.replace(/[^\d-]/g, '');
     const digits = clean.replace(/\D/g, '');
     if (digits.length > 5) {
@@ -113,9 +109,9 @@ export function CollectionPointsPanel({
       clean = digits;
     }
     setCepInput(clean);
-    setCepStatusMessage(null);
+    setCepFeedback(null);
 
-    // Auto-pesquisa se atingiu 8 dígitos completos
+    // Auto-pesquisa aos 8 dígitos
     if (digits.length === 8) {
       void executeCepLookup(digits);
     }
@@ -123,16 +119,14 @@ export function CollectionPointsPanel({
 
   async function executeCepLookup(eightDigits: string) {
     setCepLoading(true);
-    setCepStatusMessage(null);
+    setCepFeedback(null);
     try {
       const geoResult = await lookupCepLocation(eightDigits);
       setLatInput(String(geoResult.lat));
       setLngInput(String(geoResult.lng));
       setActiveLocationLabel(geoResult.label);
-      setCepStatusMessage(geoResult.label);
-      setCepStatusType('success');
+      setCepFeedback({ text: geoResult.label, isError: false });
 
-      // Executa busca imediata na API com os ecopontos do raio
       onSearchChange({
         lat: geoResult.lat,
         lng: geoResult.lng,
@@ -141,10 +135,10 @@ export function CollectionPointsPanel({
         page: 1,
       });
     } catch (err) {
-      setCepStatusMessage(
-        err instanceof Error ? err.message : 'Não foi possível localizar o CEP informado.'
-      );
-      setCepStatusType('error');
+      setCepFeedback({
+        text: err instanceof Error ? err.message : 'CEP não localizado.',
+        isError: true,
+      });
     } finally {
       setCepLoading(false);
     }
@@ -153,53 +147,57 @@ export function CollectionPointsPanel({
   function handleSearchByCepClick() {
     const digits = cepInput.replace(/\D/g, '');
     if (digits.length !== 8) {
-      setCepStatusMessage('Informe um CEP válido contendo exatamente 8 dígitos (ex: 22775-055).');
-      setCepStatusType('error');
+      setCepFeedback({
+        text: 'Informe um CEP válido com 8 dígitos (ex: 22775-055).',
+        isError: true,
+      });
       return;
     }
     void executeCepLookup(digits);
   }
 
-  function handleApplyCityNeighborhood() {
-    if (!currentCityOption) return;
+  function handleApplyCapitalNeighborhood() {
+    if (!currentCapital) return;
     const targetBairro =
-      currentCityOption.bairros.find((b) => b.nome === selectedBairro) ||
-      currentCityOption.bairros[0];
+      availableBairros.find((b) => b.nome === selectedBairro) || availableBairros[0];
 
-    if (targetBairro) {
-      setLatInput(String(targetBairro.lat));
-      setLngInput(String(targetBairro.lng));
-      const label = `${targetBairro.nome}, ${selectedCity} - ${selectedUf}`;
-      setActiveLocationLabel(label);
-      setCepStatusMessage(`Localização definida para: ${label}`);
-      setCepStatusType('success');
+    const targetLat = targetBairro ? targetBairro.lat : currentCapital.lat;
+    const targetLng = targetBairro ? targetBairro.lng : currentCapital.lng;
+    const label = targetBairro
+      ? `${targetBairro.nome}, ${currentCapital.cidade} - ${currentCapital.uf}`
+      : `${currentCapital.cidade} - ${currentCapital.uf}`;
 
-      onSearchChange({
-        lat: targetBairro.lat,
-        lng: targetBairro.lng,
-        radiusKm: Number(radiusInput) || 25,
-        category: categoryInput,
-        page: 1,
-      });
-    }
-  }
-
-  function handleQuickLocation(
-    uf: string,
-    cidade: string,
-    bairro: string,
-    targetLat: number,
-    targetLng: number
-  ) {
-    setSelectedUf(uf);
-    setSelectedCity(cidade);
-    setSelectedBairro(bairro);
     setLatInput(String(targetLat));
     setLngInput(String(targetLng));
-    const label = `${bairro}, ${cidade} - ${uf}`;
     setActiveLocationLabel(label);
-    setCepStatusMessage(`Localização definida para: ${label}`);
-    setCepStatusType('success');
+    setCepFeedback({ text: label, isError: false });
+
+    onSearchChange({
+      lat: targetLat,
+      lng: targetLng,
+      radiusKm: Number(radiusInput) || 25,
+      category: categoryInput,
+      page: 1,
+    });
+  }
+
+  function handleQuickCapital(capital: (typeof BRAZILIAN_CAPITALS)[0]) {
+    setSelectedCapitalUf(capital.uf);
+    const firstBairro = capital.bairros && capital.bairros.length > 0 ? capital.bairros[0] : null;
+    const targetLat = firstBairro ? firstBairro.lat : capital.lat;
+    const targetLng = firstBairro ? firstBairro.lng : capital.lng;
+    const label = firstBairro
+      ? `${firstBairro.nome}, ${capital.cidade} - ${capital.uf}`
+      : `${capital.cidade} - ${capital.uf}`;
+
+    if (firstBairro) {
+      setSelectedBairro(firstBairro.nome);
+    }
+
+    setLatInput(String(targetLat));
+    setLngInput(String(targetLng));
+    setActiveLocationLabel(label);
+    setCepFeedback({ text: label, isError: false });
 
     onSearchChange({
       lat: targetLat,
@@ -212,7 +210,7 @@ export function CollectionPointsPanel({
 
   function handleUseBrowserGeolocation() {
     if (!('geolocation' in navigator)) {
-      alert('Geolocalização não suportada neste navegador.');
+      alert('Geolocalização não suportada neste dispositivo.');
       return;
     }
     setCepLoading(true);
@@ -223,10 +221,9 @@ export function CollectionPointsPanel({
         const currentLng = Number(pos.coords.longitude.toFixed(6));
         setLatInput(String(currentLat));
         setLngInput(String(currentLng));
-        const label = `GPS do Dispositivo (${currentLat}, ${currentLng})`;
+        const label = `GPS Atual (${currentLat}, ${currentLng})`;
         setActiveLocationLabel(label);
-        setCepStatusMessage('Posição obtida com sucesso via GPS do dispositivo.');
-        setCepStatusType('success');
+        setCepFeedback({ text: 'Posição obtida com sucesso via GPS.', isError: false });
 
         onSearchChange({
           lat: currentLat,
@@ -238,9 +235,7 @@ export function CollectionPointsPanel({
       },
       (err) => {
         setCepLoading(false);
-        alert(
-          `Não foi possível obter a localização do dispositivo (${err.message}). Por favor, informe seu CEP ou selecione sua cidade/bairro.`
-        );
+        alert(`Não foi possível obter o GPS (${err.message}). Utilize a busca por CEP ou Capital.`);
       }
     );
   }
@@ -277,278 +272,217 @@ export function CollectionPointsPanel({
 
   return (
     <section className="panel-section">
-      <div className="card filter-card location-search-card">
-        <div className="card-header-row">
+      <div className="card search-console-card">
+        {/* Cabeçalho do Console */}
+        <div className="search-console-header">
           <div>
-            <h2>Pontos de Coleta e Descarte de Resíduos</h2>
+            <h2>Localizador de Pontos de Coleta</h2>
             <p className="text-muted">
-              Localize ecopontos homologados informando seu CEP, sua cidade ou utilizando o GPS do seu dispositivo.
+              Encontre ecopontos homologados por CEP, capital brasileira ou coordenadas no mapa.
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={onOpenCreatePoint}>
-            + Novo Ponto de Coleta
+            + Cadastrar Ponto
           </button>
         </div>
 
-        {/* Bloco Principal de Localização Brasileira (CEP / Cidade / Bairro) */}
-        <div className="location-inputs-grid">
-          {/* Opção 1: Busca por CEP */}
-          <div className="location-method-box">
-            <label htmlFor="cep-search-input" className="location-method-title">
-              <span className="location-icon">📮</span> Busca por CEP
-            </label>
-            <div className="cep-input-group">
-              <input
-                id="cep-search-input"
-                type="text"
-                inputMode="numeric"
-                maxLength={9}
-                placeholder="Ex: 22775-055"
-                value={cepInput}
-                onChange={(e) => handleCepInputChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSearchByCepClick();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleSearchByCepClick}
-                disabled={cepLoading}
-              >
-                {cepLoading ? 'Buscando...' : 'Localizar CEP'}
-              </button>
-            </div>
-            <span className="location-help-text">
-              Digite os 8 dígitos do seu CEP (ex: 22775-055 no RJ ou 59151-250 no RN).
-            </span>
-          </div>
-
-          {/* Opção 2: Seleção por Estado, Cidade e Bairro */}
-          <div className="location-method-box">
-            <span className="location-method-title">
-              <span className="location-icon">🏙️</span> Selecionar Estado, Cidade e Bairro
-            </span>
-            <div className="city-select-group">
-              <select
-                aria-label="Estado"
-                value={selectedUf}
-                onChange={(e) => handleUfChange(e.target.value)}
-              >
-                {availableUfs.map((uf) => (
-                  <option key={uf} value={uf}>
-                    {uf}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                aria-label="Cidade"
-                value={selectedCity}
-                onChange={(e) => handleCityChange(e.target.value)}
-              >
-                {availableCities.map((city) => (
-                  <option key={city.cidade} value={city.cidade}>
-                    {city.cidade}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                aria-label="Bairro"
-                value={selectedBairro}
-                onChange={(e) => setSelectedBairro(e.target.value)}
-              >
-                {availableBairros.map((b) => (
-                  <option key={b.nome} value={b.nome}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleApplyCityNeighborhood}
-              >
-                Ir para Região
-              </button>
-            </div>
-            <span className="location-help-text">
-              Centraliza o radar e a lista de ecopontos na sua região administrativa.
-            </span>
-          </div>
-        </div>
-
-        {/* Feedback visual de resolução do CEP ou Bairro */}
-        {cepStatusMessage && (
-          <div
-            className={`cep-status-banner ${
-              cepStatusType === 'error' ? 'cep-status-error' : 'cep-status-success'
-            }`}
-          >
-            <span>{cepStatusType === 'error' ? '⚠️ ' : '📍 '}</span>
-            <span>{cepStatusMessage}</span>
-          </div>
-        )}
-
-        {/* Barra de Atalhos Rápidos para Teste Imediato */}
-        <div className="presets-bar">
-          <span className="presets-label">Cidades em Destaque:</span>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('RJ', 'Rio de Janeiro', 'Taquara / Jacarepaguá', -22.9231, -43.3641)
-            }
-          >
-            Rio de Janeiro (RJ)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('RN', 'Parnamirim', 'Centro', -5.9156, -35.2628)
-            }
-          >
-            Parnamirim (RN)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('RN', 'Natal', 'Capim Macio', -5.8562, -35.2078)
-            }
-          >
-            Natal (RN)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('SP', 'São Paulo', 'Centro (Sé)', -23.55052, -46.633308)
-            }
-          >
-            São Paulo (SP)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('MG', 'Belo Horizonte', 'Savassi / Centro', -19.9328, -43.9378)
-            }
-          >
-            Belo Horizonte (MG)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('PR', 'Curitiba', 'Batel / Central', -25.4411, -49.2789)
-            }
-          >
-            Curitiba (PR)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip"
-            onClick={() =>
-              handleQuickLocation('DF', 'Brasília', 'Asa Sul', -15.7989, -47.8828)
-            }
-          >
-            Brasília (DF)
-          </button>
-          <button
-            type="button"
-            className="btn btn-chip btn-chip-accent"
-            onClick={handleUseBrowserGeolocation}
-          >
-            Usar Meu GPS
-          </button>
-        </div>
-
-        {/* Banner de Localização Ativa */}
-        <div className="active-location-banner">
-          <div className="active-location-info">
-            <span className="active-badge">Epicentro de Busca</span>
-            <strong className="active-name">{activeLocationLabel}</strong>
-          </div>
-          <div className="active-location-meta">
-            <span>Raio Atual: <strong>{radiusInput} km</strong></span>
-            <span className="bullet-sep">•</span>
-            <span><strong>{points.length}</strong> ecoponto(s) homologado(s)</span>
-          </div>
-        </div>
-
-        {/* Filtros Secundários: Raio e Categoria */}
-        <form className="secondary-filters-form" onSubmit={handleFilterSubmit}>
-          <div className="form-field-radius">
-            <label htmlFor="search-radius">Raio de Busca (km)</label>
-            <div className="radius-input-wrapper">
-              <input
-                id="search-radius"
-                type="number"
-                min="1"
-                max="1000"
-                step="1"
-                required
-                value={radiusInput}
-                onChange={(e) => setRadiusInput(e.target.value)}
-              />
-              <span className="radius-unit">km</span>
-            </div>
-            <div className="radius-quick-chips">
-              {[15, 25, 50, 100, 250].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  className={`btn btn-chip btn-sm ${
-                    Number(radiusInput) === r ? 'btn-chip-active' : ''
-                  }`}
-                  onClick={() => applyRadius(r)}
-                >
-                  {r} km
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-field-category">
-            <label htmlFor="search-category">Filtrar por Categoria de Resíduo</label>
-            <select
-              id="search-category"
-              value={categoryInput}
-              onChange={(e) => setCategoryInput(e.target.value)}
+        {/* Barra Unificada de Localização */}
+        <div className="location-toolbar">
+          <div className="mode-segmented-tabs">
+            <button
+              type="button"
+              className={`segmented-tab ${searchMode === 'cep' ? 'active' : ''}`}
+              onClick={() => setSearchMode('cep')}
             >
-              <option value="">Todas as categorias</option>
-              {ALL_WASTE_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {WASTE_CATEGORY_LABELS[cat]}
-                </option>
-              ))}
-            </select>
+              Buscar por CEP
+            </button>
+            <button
+              type="button"
+              className={`segmented-tab ${searchMode === 'capital' ? 'active' : ''}`}
+              onClick={() => setSearchMode('capital')}
+            >
+              Capitais do Brasil (27)
+            </button>
+            <button
+              type="button"
+              className="segmented-tab gps-tab"
+              onClick={handleUseBrowserGeolocation}
+              disabled={cepLoading}
+            >
+              Usar GPS
+            </button>
           </div>
 
-          <div className="form-actions-inline">
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Atualizando...' : 'Atualizar Filtros'}
+          {searchMode === 'cep' ? (
+            <div className="cep-search-toolbar">
+              <div className="cep-input-inline-wrap">
+                <input
+                  id="cep-search-input"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={9}
+                  placeholder="Informe seu CEP (ex: 22775-055)"
+                  value={cepInput}
+                  onChange={(e) => handleCepInputChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchByCepClick();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-search-cep"
+                  onClick={handleSearchByCepClick}
+                  disabled={cepLoading}
+                >
+                  {cepLoading ? 'Buscando...' : 'Localizar'}
+                </button>
+              </div>
+
+              {cepFeedback && (
+                <div
+                  className={`inline-status-badge ${
+                    cepFeedback.isError ? 'status-error' : 'status-success'
+                  }`}
+                >
+                  {cepFeedback.isError ? '!' : '✓'} {cepFeedback.text}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="capital-selector-toolbar">
+              <div className="capital-select-wrapper">
+                <label htmlFor="capital-select-input" className="select-inline-label">
+                  Capital:
+                </label>
+                <select
+                  id="capital-select-input"
+                  value={selectedCapitalUf}
+                  onChange={(e) => handleCapitalChange(e.target.value)}
+                >
+                  {regions.map((reg) => (
+                    <optgroup key={reg} label={`Região ${reg}`}>
+                      {BRAZILIAN_CAPITALS.filter((c) => c.regiao === reg).map((cap) => (
+                        <option key={cap.uf} value={cap.uf}>
+                          {cap.cidade} ({cap.uf})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {availableBairros.length > 0 && (
+                <div className="bairro-select-wrapper">
+                  <label htmlFor="bairro-select-input" className="select-inline-label">
+                    Região:
+                  </label>
+                  <select
+                    id="bairro-select-input"
+                    value={selectedBairro}
+                    onChange={(e) => setSelectedBairro(e.target.value)}
+                  >
+                    {availableBairros.map((b) => (
+                      <option key={b.nome} value={b.nome}>
+                        {b.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-secondary btn-apply-capital"
+                onClick={handleApplyCapitalNeighborhood}
+              >
+                Localizar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Atalhos Rápidos para Principais Polos */}
+        <div className="capitals-quick-row">
+          <span className="quick-row-label">Acesso Rápido:</span>
+          {BRAZILIAN_CAPITALS.filter((c) =>
+            ['RJ', 'SP', 'DF', 'MG', 'BA', 'PR', 'RS', 'PE', 'CE', 'AM'].includes(c.uf)
+          ).map((cap) => (
+            <button
+              key={cap.uf}
+              type="button"
+              className={`btn btn-chip btn-sm ${
+                selectedCapitalUf === cap.uf && activeLocationLabel.includes(cap.cidade)
+                  ? 'btn-chip-active'
+                  : ''
+              }`}
+              onClick={() => handleQuickCapital(cap)}
+            >
+              {cap.cidade} ({cap.uf})
+            </button>
+          ))}
+        </div>
+
+        {/* Barra de Filtros de Apoio e Localização Ativa */}
+        <form className="console-filters-bar" onSubmit={handleFilterSubmit}>
+          <div className="active-pill-box">
+            <span className="pill-dot" />
+            <span className="pill-location-text">{activeLocationLabel}</span>
+            <span className="pill-count-badge">
+              <strong>{points.length}</strong> no raio de {radiusInput} km
+            </span>
+          </div>
+
+          <div className="filter-controls-group">
+            <div className="radius-compact-control">
+              <span className="control-label">Raio:</span>
+              <div className="radius-chips-mini">
+                {[15, 25, 50, 100, 250].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    className={`btn-chip-mini ${
+                      Number(radiusInput) === r ? 'active' : ''
+                    }`}
+                    onClick={() => applyRadius(r)}
+                  >
+                    {r}km
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="category-compact-control">
+              <select
+                id="search-category"
+                aria-label="Filtrar por Categoria"
+                value={categoryInput}
+                onChange={(e) => setCategoryInput(e.target.value)}
+              >
+                <option value="">Todas as categorias de resíduos</option>
+                {ALL_WASTE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {WASTE_CATEGORY_LABELS[cat]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button type="submit" className="btn btn-secondary btn-sm" disabled={loading}>
+              {loading ? 'Filtrando...' : 'Atualizar'}
             </button>
           </div>
         </form>
 
-        {/* Opções Técnicas Avançadas (Coordenadas Manuais) recolhidas */}
-        <details className="advanced-coordinates-accordion">
-          <summary>Opções Avançadas: Ajustar Coordenadas Geográficas Manuais (Latitude / Longitude)</summary>
-          <div className="advanced-coordinates-body">
-            <p className="text-muted">
-              As coordenadas são sincronizadas automaticamente ao buscar por CEP ou cidade. Use estes campos apenas caso queira especificar coordenadas geográficas manuais.
-            </p>
-            <div className="advanced-coords-grid">
-              <div className="form-field">
-                <label htmlFor="search-lat">Latitude (-90 a 90)</label>
+        {/* Opções Técnicas Avançadas (recolhidas em uma linha discreta) */}
+        <details className="technical-options-details">
+          <summary>Ajuste Manual de Coordenadas e Consulta por Código ID</summary>
+          <div className="technical-options-body">
+            <div className="manual-coords-row">
+              <div className="field-group">
+                <label htmlFor="search-lat">Latitude</label>
                 <input
                   id="search-lat"
                   type="number"
@@ -557,8 +491,8 @@ export function CollectionPointsPanel({
                   onChange={(e) => setLatInput(e.target.value)}
                 />
               </div>
-              <div className="form-field">
-                <label htmlFor="search-lng">Longitude (-180 a 180)</label>
+              <div className="field-group">
+                <label htmlFor="search-lng">Longitude</label>
                 <input
                   id="search-lng"
                   type="number"
@@ -569,7 +503,7 @@ export function CollectionPointsPanel({
               </div>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 onClick={() => {
                   onSearchChange({
                     lat: Number(latInput),
@@ -581,28 +515,32 @@ export function CollectionPointsPanel({
                   setActiveLocationLabel(`Coordenadas manuais (${latInput}, ${lngInput})`);
                 }}
               >
-                Aplicar Coordenadas
+                Aplicar Lat/Lng
+              </button>
+            </div>
+
+            <div className="uuid-search-row">
+              <label htmlFor="lookup-point-id">Consultar por ID:</label>
+              <input
+                id="lookup-point-id"
+                type="text"
+                placeholder="Informe o identificador UUID da unidade..."
+                value={lookupId}
+                onChange={(e) => setLookupId(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleLookupSubmit}
+              >
+                Consultar
               </button>
             </div>
           </div>
         </details>
-
-        {/* Consulta Direta por Identificador */}
-        <form className="lookup-bar" onSubmit={handleLookupSubmit}>
-          <label htmlFor="lookup-point-id">Consultar ecoponto específico por código identificador (ID):</label>
-          <input
-            id="lookup-point-id"
-            type="text"
-            placeholder="Informe o identificador da unidade (ex: 3c4d5e6f-789a-4bc1-9012-3456789abcde)"
-            value={lookupId}
-            onChange={(e) => setLookupId(e.target.value)}
-          />
-          <button type="submit" className="btn btn-secondary btn-sm">
-            Consultar ID
-          </button>
-        </form>
       </div>
 
+      {/* Grid Principal: Radar Espacial à Esquerda + Lista de Ecopontos à Direita */}
       <div className="explorer-split-layout">
         <SpatialRadarMap
           centerLat={lat}
@@ -682,20 +620,22 @@ export function CollectionPointsPanel({
                 <button
                   type="button"
                   className="btn btn-chip btn-sm"
-                  onClick={() =>
-                    handleQuickLocation('RJ', 'Rio de Janeiro', 'Taquara / Jacarepaguá', -22.9231, -43.3641)
-                  }
+                  onClick={() => {
+                    const rj = BRAZILIAN_CAPITALS.find((c) => c.uf === 'RJ');
+                    if (rj) handleQuickCapital(rj);
+                  }}
                 >
                   Ver Ecopontos no Rio de Janeiro
                 </button>
                 <button
                   type="button"
                   className="btn btn-chip btn-sm"
-                  onClick={() =>
-                    handleQuickLocation('RN', 'Parnamirim', 'Centro', -5.9156, -35.2628)
-                  }
+                  onClick={() => {
+                    const sp = BRAZILIAN_CAPITALS.find((c) => c.uf === 'SP');
+                    if (sp) handleQuickCapital(sp);
+                  }}
                 >
-                  Ver Ecopontos em Parnamirim/RN
+                  Ver Ecopontos em São Paulo
                 </button>
               </div>
             </div>
