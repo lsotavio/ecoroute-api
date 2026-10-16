@@ -173,7 +173,6 @@ export function CollectionPointForm({
                     onClick={() => toggleCategory(cat)}
                   >
                     <span>{WASTE_CATEGORY_LABELS[cat]}</span>
-                    <span className="category-code-tag">{cat}</span>
                   </button>
                 );
               })}

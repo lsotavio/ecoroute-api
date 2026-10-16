@@ -47,9 +47,9 @@ export function App() {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
-  const [lat, setLat] = useState(-23.55052);
-  const [lng, setLng] = useState(-46.633308);
-  const [radiusKm, setRadiusKm] = useState(15);
+  const [lat, setLat] = useState(-22.9231);
+  const [lng, setLng] = useState(-43.3641);
+  const [radiusKm, setRadiusKm] = useState(25);
   const [category, setCategory] = useState('');
 
   const [points, setPoints] = useState<CollectionPoint[]>([]);
@@ -129,7 +129,7 @@ export function App() {
 
   useEffect(() => {
     void fetchHealth();
-    void fetchPoints({ lat: -23.55052, lng: -46.633308, radiusKm: 15, category: '', page: 1 });
+    void fetchPoints({ lat: -22.9231, lng: -43.3641, radiusKm: 25, category: '', page: 1 });
     void fetchSchedules();
   }, [fetchHealth, fetchPoints, fetchSchedules]);
 

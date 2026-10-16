@@ -111,4 +111,35 @@ describe('Front-End HTTP Client Integration with Back-End API', () => {
       status: 404,
     });
   });
+
+  it('deve localizar ecopontos homologados no Rio de Janeiro (RJ) e em Parnamirim (RN) com raio expandido', async () => {
+    // 1. Busca no Rio de Janeiro (Taquara/Jacarepaguá)
+    const rjSearch = await client.searchPoints({
+      lat: -22.9231,
+      lng: -43.3641,
+      radius_km: 25,
+    });
+    expect(rjSearch.data.length).toBeGreaterThanOrEqual(4);
+    const rjNames = rjSearch.data.map((p) => p.name);
+    expect(rjNames).toContain('Ecoponto COMLURB Taquara (Jacarepaguá)');
+    expect(rjNames).toContain('Ecoponto COMLURB Madureira');
+
+    // 2. Busca em Parnamirim / Natal (RN)
+    const rnSearch = await client.searchPoints({
+      lat: -5.9156,
+      lng: -35.2628,
+      radius_km: 25,
+    });
+    expect(rnSearch.data.length).toBeGreaterThanOrEqual(2);
+    const rnNames = rnSearch.data.map((p) => p.name);
+    expect(rnNames).toContain('Ecoponto Parnamirim Centro');
+
+    // 3. Busca com raio regional (250 km) a partir de Parnamirim encontra ecopontos em Natal
+    const regionalSearch = await client.searchPoints({
+      lat: -5.9156,
+      lng: -35.2628,
+      radius_km: 250,
+    });
+    expect(regionalSearch.data.length).toBeGreaterThanOrEqual(4);
+  });
 });
