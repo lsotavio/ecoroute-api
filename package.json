@@ -1,5 +1,5 @@
 {
-  "name": "ecoroute-api",
+  "name": "ecoroute",
   "version": "1.1.0",
   "description": "Sistema full-stack (API RESTful e interface React) para mapeamento geoespacial de pontos de coleta e agendamento de descarte de resíduos eletroeletrônicos (ODS 11.6).",
   "main": "dist/server.js",
