@@ -8,6 +8,7 @@ import {
   ScheduleStatus,
   WASTE_CATEGORY_LABELS,
   WasteCategory,
+  ecorouteApi,
 } from '../api';
 
 interface SchedulesPanelProps {
@@ -61,6 +62,44 @@ export function SchedulesPanel({
   const [filterDate, setFilterDate] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [lookupId, setLookupId] = useState('');
+  const [resolvedPointsMap, setResolvedPointsMap] = useState<Record<string, CollectionPoint>>({});
+
+  useEffect(() => {
+    const missingIds = Array.from(
+      new Set(schedules.map((s) => s.collection_point_id))
+    ).filter(
+      (id) => !points.some((p) => p.id === id) && !resolvedPointsMap[id]
+    );
+
+    if (missingIds.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          const pt = await ecorouteApi.getPointById(id);
+          return [id, pt] as const;
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const validEntries = results.filter(
+        (entry): entry is readonly [string, CollectionPoint] => entry !== null
+      );
+      if (validEntries.length > 0) {
+        setResolvedPointsMap((prev) => ({
+          ...prev,
+          ...Object.fromEntries(validEntries),
+        }));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [schedules, points, resolvedPointsMap]);
 
   useEffect(() => {
     if (preselectedPointId) {
@@ -77,11 +116,15 @@ export function SchedulesPanel({
     }
   }, [preselectedPointId, points, collectionPointId]);
 
-  const selectedPoint = points.find((pt) => pt.id === collectionPointId) || null;
+  const selectedPoint =
+    points.find((pt) => pt.id === collectionPointId) ||
+    resolvedPointsMap[collectionPointId] ||
+    null;
 
   function handlePointSelectionChange(newPointId: string) {
     setCollectionPointId(newPointId);
-    const point = points.find((pt) => pt.id === newPointId);
+    const point =
+      points.find((pt) => pt.id === newPointId) || resolvedPointsMap[newPointId];
     if (point && point.accepted_categories.length > 0) {
       setWasteCategory(point.accepted_categories[0]);
     }
@@ -130,7 +173,7 @@ export function SchedulesPanel({
   }
 
   function resolvePointName(pointId: string): string {
-    const found = points.find((pt) => pt.id === pointId);
+    const found = points.find((pt) => pt.id === pointId) || resolvedPointsMap[pointId];
     return found ? found.name : `Ponto ${pointId.slice(0, 8)}...`;
   }
 

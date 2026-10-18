@@ -70,6 +70,10 @@ export class DatabaseProvider {
     return this.pool !== null;
   }
 
+  public isHealthy(): boolean {
+    return this.isConnected;
+  }
+
   public async close(): Promise<void> {
     if (this.pool) {
       await this.pool.end();

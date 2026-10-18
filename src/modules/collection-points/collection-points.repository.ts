@@ -342,7 +342,9 @@ export class InMemoryCollectionPointsRepository implements ICollectionPointsRepo
 
 export function createCollectionPointsRepository(): ICollectionPointsRepository {
   const useInMemory =
-    process.env.USE_IN_MEMORY_DB === 'true' || !process.env.DATABASE_URL;
+    process.env.USE_IN_MEMORY_DB === 'true' ||
+    !process.env.DATABASE_URL ||
+    !dbProvider.isHealthy();
   if (useInMemory) {
     return new InMemoryCollectionPointsRepository();
   }
